@@ -1,0 +1,149 @@
+@using UseCases.Cart
+
+<div class="card shadow-sm border-0" style="border-radius: 16px;">
+    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-receipt text-primary me-2"></i> Giỏ Món Đang Chọn
+        </h5>
+        <span class="badge bg-primary rounded-pill px-3 py-2">
+            @CartItems.Sum(c => c.Quantity) món
+        </span>
+    </div>
+
+    <div class="card-body p-3">
+        @if (!CartItems.Any())
+        {
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-cart-x fs-1 text-secondary opacity-50 d-block mb-2"></i>
+                <p class="mb-0">Chưa có món ăn nào trong giỏ của bàn này.</p>
+                <small>Hãy chọn các món ăn từ thực đơn bên cạnh.</small>
+            </div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush mb-3" style="max-height: 380px; overflow-y: auto;">
+                @foreach (var item in CartItems)
+                {
+                    <div class="list-group-item px-0 py-2 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="me-2 flex-grow-1">
+                                <div class="fw-semibold text-dark">@item.Item.Name</div>
+                                <div class="text-muted small">
+                                    @item.Item.Price.ToString("N0") đ × @item.Quantity = <span class="fw-bold text-dark">@item.LineTotal.ToString("N0") đ</span>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(item.SpecialInstructions))
+                                {
+                                    <div class="text-info small fst-italic">
+                                        <i class="bi bi-pencil-square me-1"></i> @item.SpecialInstructions
+                                    </div>
+                                }
+                            </div>
+
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-secondary py-0 px-2" 
+                                            @onclick="() => UpdateQty(item.Item.MenuItemId, item.Quantity - 1)">
+                                        -
+                                    </button>
+                                    <span class="btn btn-light py-0 px-2 fw-bold text-dark" style="pointer-events: none;">
+                                        @item.Quantity
+                                    </span>
+                                    <button class="btn btn-outline-secondary py-0 px-2" 
+                                            @onclick="() => UpdateQty(item.Item.MenuItemId, item.Quantity + 1)">
+                                        +
+                                    </button>
+                                </div>
+
+                                <button class="btn btn-outline-danger btn-sm border-0 ms-1 p-1" 
+                                        title="Xóa món"
+                                        @onclick="() => RemoveItem(item.Item.MenuItemId)">
+                                    <i class="bi bi-trash3-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- TÍNH TOÁN HÓA ĐƠN THEO LUẬT 2.3 -->
+            <div class="bg-light p-3 rounded-3 mb-3 border">
+                <div class="d-flex justify-content-between text-muted small mb-1">
+                    <span>Tạm tính tiền món:</span>
+                    <span class="fw-semibold">@SubTotal.ToString("N0") đ</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted small mb-1">
+                    <span>Phí phục vụ (@ServiceFeeRate%):</span>
+                    <span class="fw-semibold text-info">+@ServiceFeeAmount.ToString("N0") đ</span>
+                </div>
+                <hr class="my-2" />
+                <div class="d-flex justify-content-between align-items-baseline">
+                    <span class="fw-bold text-dark fs-6">Tổng cộng tạm tính:</span>
+                    <span class="fw-bold text-danger fs-5">@TotalAmount.ToString("N0") đ</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary w-100 py-2 rounded-pill fw-semibold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                    disabled="@IsSubmitting"
+                    @onclick="SubmitOrder">
+                @if (IsSubmitting)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                    <span>Đang gửi món vào bếp...</span>
+                }
+                else
+                {
+                    <i class="bi bi-send-fill"></i>
+                    <span>Gửi Gọi Món Vào Bếp</span>
+                }
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+    [Parameter]
+    public decimal ServiceFeeRate { get; set; } = 5;
+
+    [Parameter]
+    public bool IsSubmitting { get; set; } = false;
+
+    [Parameter]
+    public EventCallback<int> OnRemoveItem { get; set; }
+
+    [Parameter]
+    public EventCallback<(int menuItemId, int quantity)> OnUpdateQuantity { get; set; }
+
+    [Parameter]
+    public EventCallback OnSubmitOrder { get; set; }
+
+    private decimal SubTotal => CartItems.Sum(c => c.LineTotal);
+    private decimal ServiceFeeAmount => Math.Round(SubTotal * (ServiceFeeRate / 100m), 0);
+    private decimal TotalAmount => SubTotal + ServiceFeeAmount;
+
+    private async Task RemoveItem(int id)
+    {
+        if (OnRemoveItem.HasDelegate)
+        {
+            await OnRemoveItem.InvokeAsync(id);
+        }
+    }
+
+    private async Task UpdateQty(int id, int qty)
+    {
+        if (OnUpdateQuantity.HasDelegate)
+        {
+            await OnUpdateQuantity.InvokeAsync((id, qty));
+        }
+    }
+
+    private async Task SubmitOrder()
+    {
+        if (OnSubmitOrder.HasDelegate)
+        {
+            await OnSubmitOrder.InvokeAsync();
+        }
+    }
+}

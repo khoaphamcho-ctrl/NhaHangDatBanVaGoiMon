@@ -1,0 +1,216 @@
+@page "/ai-assistant"
+@inject IGetAiFoodAdviceUseCase AiAdviceUseCase
+@inject IViewTablesUseCase ViewTablesUseCase
+@inject ITableCartService CartService
+@inject NavigationManager NavManager
+
+<PageTitle>Trợ Lý AI Gợi Ý Món Ăn - Nhà Hàng Cố Đô Huế</PageTitle>
+
+<div class="container py-4">
+    <!-- TIÊU ĐỀ -->
+    <div class="text-center mb-4">
+        <span class="badge bg-gold text-dark px-3 py-2 rounded-pill fw-bold text-uppercase mb-2 shadow-sm" style="background-color: #FFD700;">
+            <i class="bi bi-stars me-1"></i> Tính Năng Nâng Cao AI (Mục 10 & Tiêu Chí K4.3)
+        </span>
+        <h2 class="fw-bold mt-2 mb-1">Trợ Lý AI Gợi Ý Thực Đơn</h2>
+        <p class="text-muted mx-auto" style="max-width: 650px;">
+            Hệ sinh thái AI thông minh dựa trên dữ liệu thực đơn có sẵn, tự động tính toán combo món ăn cân bằng dinh dưỡng, phù hợp với số lượng khách và ngân sách của bạn.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <!-- FORM NHẬP YÊU CẦU CHO AI -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0 p-4 rounded-4 bg-white sticky-top" style="top: 80px;">
+                <h5 class="fw-bold mb-3 text-dark border-bottom pb-2 d-flex align-items-center gap-2">
+                    <i class="bi bi-sliders text-primary"></i> Tiêu Chí Gợi Ý
+                </h5>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-muted">Bàn áp dụng món:</label>
+                    <select class="form-select" @bind="_selectedTableId">
+                        @if (_tables != null)
+                        {
+                            @foreach (var table in _tables)
+                            {
+                                <option value="@table.TableId">@table.TableNumber (@table.Location)</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small text-muted">Số lượng khách:</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" @bind="_request.GuestCount" min="1" max="30" />
+                            <span class="input-group-text bg-light text-muted small">người</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold small text-muted">Ngân sách dự kiến:</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" @bind="_request.Budget" step="50000" min="50000" />
+                            <span class="input-group-text bg-light text-muted small">đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small text-muted">Sở thích ẩm thực (Tùy chọn):</label>
+                    <input type="text" class="form-control" @bind="_request.Preferences" 
+                           placeholder="Ví dụ: Thích cay nồng, ăn nhiều hải sản, bún bò..." />
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold small text-muted">Ghi chú dị ứng / Sức khỏe (Tùy chọn):</label>
+                    <input type="text" class="form-control" @bind="_request.DietaryNotes" 
+                           placeholder="Ví dụ: Dị ứng đậu phộng, có người già, ít dầu mỡ..." />
+                </div>
+
+                <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
+                        disabled="@_isAnalyzing"
+                        @onclick="HandleAskAi">
+                    @if (_isAnalyzing)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        <span>Trợ lý AI đang phân tích dữ liệu thực đơn...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-robot fs-5"></i>
+                        <span>AI Phân Tích & Gợi Ý Combo Món</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <!-- KẾT QUẢ GỢI Ý CỦA TRỢ LÝ AI -->
+        <div class="col-lg-7">
+            @if (_result == null && !_isAnalyzing)
+            {
+                <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white h-100 d-flex flex-column justify-content-center align-items-center">
+                    <i class="bi bi-chat-heart-fill fs-1 text-primary opacity-50 mb-3" style="font-size: 3.5rem;"></i>
+                    <h5 class="fw-bold text-dark">Hãy để Trợ Lý AI đồng hành cùng bữa ăn của bạn</h5>
+                    <p class="text-muted" style="max-width: 450px;">
+                        Nhập số lượng khách và ngân sách mong muốn ở bên trái, sau đó nhấn nút để AI gợi ý combo món ăn hoàn hảo nhất từ CSDL nhà hàng.
+                    </p>
+                </div>
+            }
+            else if (_isAnalyzing)
+            {
+                <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white h-100 d-flex flex-column justify-content-center align-items-center">
+                    <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+                    <h5 class="fw-bold text-dark">Đang kết nối UseCase AI...</h5>
+                    <p class="text-muted small">Phân tích giá thành, độ phối hợp hương vị món ăn Cố đô...</p>
+                </div>
+            }
+            else if (_result != null)
+            {
+                @if (!_result.IsSuccess)
+                {
+                    <div class="alert alert-warning rounded-4 shadow-sm p-4">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 text-warning me-2"></i>
+                        <strong>Thông báo từ AI:</strong> @_result.ErrorMessage
+                    </div>
+                }
+                else
+                {
+                    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-success rounded-pill px-3 py-2">
+                                <i class="bi bi-check-lg me-1"></i> Gợi Ý Hoàn Tất
+                            </span>
+                            <span class="text-muted small">Dự kiến: @_result.EstimatedTotal.ToString("N0") đ</span>
+                        </div>
+
+                        <!-- LỜI TƯ VẤN CỦA AI -->
+                        <div class="bg-light p-3 rounded-3 mb-3 border border-light-subtle">
+                            <div class="small text-dark" style="white-space: pre-line;">
+                                @_result.SummaryAdvice
+                            </div>
+                        </div>
+
+                        <!-- DANH SÁCH MÓN AI ĐỀ XUẤT -->
+                        <h6 class="fw-bold text-dark mb-3">Các món được đề xuất trong combo:</h6>
+                        <div class="list-group list-group-flush mb-4">
+                            @foreach (var item in _result.SuggestedItems)
+                            {
+                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="@item.ImageUrl" alt="@item.Name" 
+                                             class="rounded-3 object-fit-cover" 
+                                             style="width: 50px; height: 50px;"
+                                             onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop'" />
+                                        <div>
+                                            <div class="fw-semibold text-dark">@item.Name</div>
+                                            <span class="badge bg-secondary bg-opacity-25 text-dark small">@item.CategoryName</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <span class="fw-bold text-primary">@item.Price.ToString("N0") đ</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- XÁC NHẬN CỦA NGƯỜI DÙNG TRƯỚC KHI LƯU (MỤC 10 QUY ĐỊNH) -->
+                        <div class="p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25 d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+                            <div>
+                                <small class="text-muted d-block">Mục 10 Quy định: Dữ liệu do AI tạo cần người dùng xác nhận</small>
+                                <strong class="text-dark">Thêm combo này vào Bàn @_selectedTableId ngay?</strong>
+                            </div>
+                            <button class="btn btn-primary rounded-pill px-4 py-2 fw-semibold shadow-sm text-nowrap"
+                                    @onclick="ConfirmAndAddToCart">
+                                <i class="bi bi-cart-plus-fill me-1"></i> Xác Nhận Thêm Vào Bàn
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<DiningTable>? _tables;
+    private int _selectedTableId = 1;
+    private AiAdviceRequest _request = new();
+    private AiAdviceResult? _result;
+    private bool _isAnalyzing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var tables = await ViewTablesUseCase.ExecuteAsync();
+        _tables = tables.ToList();
+        if (_tables.Any())
+        {
+            _selectedTableId = _tables.First().TableId;
+        }
+    }
+
+    private async Task HandleAskAi()
+    {
+        _isAnalyzing = true;
+        _result = null;
+
+        // Thêm độ trễ mô phỏng tính toán suy luận AI
+        await Task.Delay(400);
+
+        _result = await AiAdviceUseCase.ExecuteAsync(_request);
+        _isAnalyzing = false;
+    }
+
+    private void ConfirmAndAddToCart()
+    {
+        if (_result == null || !_result.SuggestedItems.Any()) return;
+
+        foreach (var item in _result.SuggestedItems)
+        {
+            CartService.AddItem(_selectedTableId, item, 1, "Món theo gợi ý AI");
+        }
+
+        // Chuyển hướng người dùng sang trang gọi món của bàn đó
+        NavManager.NavigateTo($"goi-mon/{_selectedTableId}");
+    }
+}

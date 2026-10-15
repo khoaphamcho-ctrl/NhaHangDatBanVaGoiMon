@@ -1,0 +1,193 @@
+@page "/menu"
+@inject IViewMenuUseCase ViewMenuUseCase
+@inject IViewTablesUseCase ViewTablesUseCase
+@inject ITableCartService CartService
+@inject NavigationManager NavManager
+
+<PageTitle>Thực Đơn - Nhà Hàng Cố Đô Huế</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4 border-bottom pb-3">
+        <div>
+            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill fw-bold text-uppercase">
+                <i class="bi bi-book-half me-1"></i> Tinh Hoa Xứ Huế
+            </span>
+            <h2 class="fw-bold mt-2 mb-1">Thực Đơn Món Ăn</h2>
+            <p class="text-muted mb-0">Thưởng thức hương vị ẩm thực Cung đình và Dân dã đậm đà bản sắc Huế</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="ai-assistant" class="btn btn-gold rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2">
+                <i class="bi bi-robot"></i>
+                <span>Trợ Lý AI Gợi Ý Món</span>
+            </a>
+            <a href="goi-mon/1" class="btn btn-primary rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2">
+                <i class="bi bi-qr-code-scan"></i>
+                <span>Bàn Gọi Món</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- THANH TÌM KIẾM & BỘ LỌC DANH MỤC -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-lg-5">
+            <div class="input-group shadow-sm">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 ps-0" 
+                       placeholder="Tìm kiếm tên món ăn (Bún bò, bánh bèo, nem lụi...)"
+                       @bind="_searchTerm"
+                       @bind:event="oninput"
+                       @bind:after="ApplyFilter" />
+                @if (!string.IsNullOrWhiteSpace(_searchTerm))
+                {
+                    <button class="btn btn-outline-secondary border-start-0" type="button" @onclick="ClearSearch">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-7 d-flex align-items-center gap-2 overflow-x-auto pb-1">
+            <button class="btn btn-sm rounded-pill px-3 text-nowrap @(_selectedCategoryId == null ? "btn-danger fw-bold shadow-sm" : "btn-light border")"
+                    @onclick="() => FilterByCategory(null)">
+                Tất cả (@_allItemsCount)
+            </button>
+            @if (_categories != null)
+            {
+                @foreach (var cat in _categories)
+                {
+                    <button class="btn btn-sm rounded-pill px-3 text-nowrap @(_selectedCategoryId == cat.CategoryId ? "btn-danger fw-bold shadow-sm" : "btn-light border")"
+                            @onclick="() => FilterByCategory(cat.CategoryId)">
+                        <i class="bi @cat.Icon me-1"></i> @cat.Name
+                    </button>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- DANH SÁCH MÓN ĂN (K3.1: MenuItemCardComponent) -->
+    @if (_filteredItems == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="text-muted mt-2">Đang nạp thực đơn...</p>
+        </div>
+    }
+    else if (!_filteredItems.Any())
+    {
+        <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white">
+            <i class="bi bi-search fs-1 text-muted opacity-50 mb-3"></i>
+            <h5 class="fw-bold text-dark">Không tìm thấy món ăn phù hợp</h5>
+            <p class="text-muted mb-3">Vui lòng thử tìm với từ khóa khác hoặc xóa bộ lọc danh mục.</p>
+            <div>
+                <button class="btn btn-outline-danger rounded-pill px-4" @onclick="ResetFilter">
+                    Xem toàn bộ món ăn
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @foreach (var item in _filteredItems)
+            {
+                <div class="col-lg-3 col-md-4 col-sm-6">
+                    <!-- SỬ DỤNG COMPONENT TÁI SỬ DỤNG 2 (K3.1) -->
+                    <MenuItemCardComponent Item="item" OnAddToCart="HandleAddToCart" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- TOAST THÔNG BÁO KHI THÊM MÓN THÀNH CÔNG -->
+@if (!string.IsNullOrEmpty(_toastMessage))
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div class="toast show shadow-lg border-0 bg-success text-white rounded-3" role="alert">
+            <div class="toast-body d-flex align-items-center justify-content-between p-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-check2-circle fs-4"></i>
+                    <span>@_toastMessage</span>
+                </div>
+                <a href="goi-mon/1" class="btn btn-sm btn-light text-success fw-bold rounded-pill ms-3">
+                    Xem giỏ
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MenuCategory>? _categories;
+    private List<MenuItem>? _allItems;
+    private List<MenuItem>? _filteredItems;
+    private int? _selectedCategoryId;
+    private string _searchTerm = string.Empty;
+    private int _allItemsCount = 0;
+    private string? _toastMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = (await ViewMenuUseCase.GetCategoriesAsync()).ToList();
+        var all = await ViewMenuUseCase.GetMenuItemsAsync();
+        _allItems = all.ToList();
+        _allItemsCount = _allItems.Count;
+        _filteredItems = _allItems;
+    }
+
+    private void FilterByCategory(int? categoryId)
+    {
+        _selectedCategoryId = categoryId;
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        if (_allItems == null) return;
+
+        var query = _allItems.AsEnumerable();
+
+        if (_selectedCategoryId.HasValue)
+        {
+            query = query.Where(i => i.CategoryId == _selectedCategoryId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_searchTerm))
+        {
+            query = query.Where(i => i.Name.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                                     i.Description.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        _filteredItems = query.ToList();
+    }
+
+    private void ClearSearch()
+    {
+        _searchTerm = string.Empty;
+        ApplyFilter();
+    }
+
+    private void ResetFilter()
+    {
+        _selectedCategoryId = null;
+        _searchTerm = string.Empty;
+        _filteredItems = _allItems;
+    }
+
+    private void HandleAddToCart((MenuItem item, int quantity, string note) args)
+    {
+        // Mặc định thêm vào giỏ bàn 01 (khách có thể chuyển bàn trên trang Gọi món)
+        CartService.AddItem(1, args.item, args.quantity, args.note);
+        _toastMessage = $"Đã thêm {args.quantity}x {args.item.Name} vào giỏ món của Bàn 01!";
+        
+        // Tự động tắt toast sau 3 giây
+        Task.Delay(3000).ContinueWith(_ =>
+        {
+            _toastMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+}

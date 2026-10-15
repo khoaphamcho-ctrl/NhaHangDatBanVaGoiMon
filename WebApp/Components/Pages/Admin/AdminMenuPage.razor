@@ -1,0 +1,265 @@
+@page "/admin/menu"
+@attribute [Authorize(Roles = "Admin,Staff")]
+@inject IViewMenuUseCase ViewMenuUseCase
+@inject IManageMenuUseCase ManageMenuUseCase
+
+<PageTitle>Quản Lý Thực Đơn - Quản Trị Nhà Hàng</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4 border-bottom pb-3">
+        <div>
+            <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold text-uppercase">
+                <i class="bi bi-card-checklist me-1"></i> Quản Trị Thực Đơn
+            </span>
+            <h2 class="fw-bold mt-2 mb-1">Danh Sách Món Ăn Nhà Hàng</h2>
+            <p class="text-muted mb-0">Thêm mới, chỉnh sửa món ăn và bật/tắt tình trạng hết hàng để kiểm soát gọi món</p>
+        </div>
+
+        <button class="btn btn-primary rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2" @onclick="OpenAddModal">
+            <i class="bi bi-plus-circle-fill"></i>
+            <span>Thêm Món Mới</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @_message
+            <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+        </div>
+    }
+
+    @if (_items == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="text-muted mt-2">Đang tải danh sách món ăn...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3" style="width: 70px;">Hình ảnh</th>
+                            <th>Tên món ăn</th>
+                            <th>Danh mục</th>
+                            <th>Giá bán</th>
+                            <th>Đơn vị</th>
+                            <th>Trạng thái kho</th>
+                            <th class="text-end pe-3">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in _items)
+                        {
+                            <tr>
+                                <td class="ps-3">
+                                    <img src="@item.ImageUrl" alt="@item.Name" 
+                                         class="rounded-3 object-fit-cover shadow-sm" 
+                                         style="width: 50px; height: 50px;"
+                                         onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=100&auto=format&fit=crop'" />
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@item.Name</div>
+                                    <small class="text-muted line-clamp-1" style="max-width: 250px;">@item.Description</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@item.CategoryName</span>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-danger">@item.Price.ToString("N0") đ</span>
+                                </td>
+                                <td>@item.Unit</td>
+                                <td>
+                                    <!-- NÚT BẬT TẮT HẾT HÀNG PHỤC VỤ LUẬT 2.2 -->
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                               checked="@item.IsAvailable"
+                                               @onchange="(e) => ToggleAvailability(item.MenuItemId, (bool)(e.Value ?? false))" />
+                                        <label class="form-check-label small fw-semibold @(item.IsAvailable ? "text-success" : "text-danger")">
+                                            @(item.IsAvailable ? "Còn hàng" : "Hết hàng")
+                                        </label>
+                                    </div>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary" @onclick="() => OpenEditModal(item)" title="Sửa món">
+                                            <i class="bi bi-pencil-fill"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" @onclick="() => DeleteItem(item.MenuItemId)" title="Xóa món">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- MODAL THÊM / SỬA MÓN ĂN -->
+@if (_showModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-egg-fried me-2"></i> @(_isEdit ? "Chỉnh Sửa Món Ăn" : "Thêm Món Ăn Mới")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tên món ăn *</label>
+                        <input type="text" class="form-control" @bind="_editingItem.Name" placeholder="Ví dụ: Bún Bò Càng Cua" />
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label small fw-semibold">Danh mục *</label>
+                            <select class="form-select" @bind="_editingItem.CategoryId">
+                                @if (_categories != null)
+                                {
+                                    @foreach (var c in _categories)
+                                    {
+                                        <option value="@c.CategoryId">@c.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label small fw-semibold">Đơn vị tính</label>
+                            <input type="text" class="form-control" @bind="_editingItem.Unit" placeholder="Tô / Phần / Đĩa" />
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Giá bán (VNĐ) *</label>
+                            <input type="number" class="form-control" @bind="_editingItem.Price" step="5000" min="0" />
+                        </div>
+                        <div class="col-6 d-flex align-items-end mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="_editingItem.IsAvailable" id="availSwitch" />
+                                <label class="form-check-label small fw-semibold" for="availSwitch">Còn phục vụ</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Đường dẫn ảnh (URL)</label>
+                        <input type="text" class="form-control" @bind="_editingItem.ImageUrl" placeholder="https://..." />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mô tả chi tiết món</label>
+                        <textarea class="form-control" @bind="_editingItem.Description" rows="2" placeholder="Hương vị, nguyên liệu đặc sắc..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-top-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseModal">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold" @onclick="SaveItem">
+                        <i class="bi bi-save me-1"></i> Lưu thông tin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MenuItem>? _items;
+    private List<MenuCategory>? _categories;
+    private string? _message;
+    private bool _showModal = false;
+    private bool _isEdit = false;
+    private MenuItem _editingItem = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = (await ViewMenuUseCase.GetCategoriesAsync()).ToList();
+        await LoadItems();
+    }
+
+    private async Task LoadItems()
+    {
+        var items = await ViewMenuUseCase.GetMenuItemsAsync();
+        _items = items.ToList();
+    }
+
+    private async Task ToggleAvailability(int itemId, bool isAvailable)
+    {
+        await ManageMenuUseCase.ToggleAvailabilityAsync(itemId, isAvailable);
+        _message = $"Đã cập nhật trạng thái món ID #{itemId} sang: {(isAvailable ? "Còn hàng" : "Hết hàng")}.";
+        await LoadItems();
+    }
+
+    private void OpenAddModal()
+    {
+        _isEdit = false;
+        _editingItem = new MenuItem
+        {
+            CategoryId = _categories?.FirstOrDefault()?.CategoryId ?? 1,
+            IsAvailable = true,
+            Unit = "Phần",
+            Price = 50000,
+            ImageUrl = "https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=600&auto=format&fit=crop"
+        };
+        _showModal = true;
+    }
+
+    private void OpenEditModal(MenuItem item)
+    {
+        _isEdit = true;
+        _editingItem = new MenuItem
+        {
+            MenuItemId = item.MenuItemId,
+            CategoryId = item.CategoryId,
+            CategoryName = item.CategoryName,
+            Name = item.Name,
+            Price = item.Price,
+            Unit = item.Unit,
+            Description = item.Description,
+            ImageUrl = item.ImageUrl,
+            IsAvailable = item.IsAvailable
+        };
+        _showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        _showModal = false;
+    }
+
+    private async Task SaveItem()
+    {
+        if (string.IsNullOrWhiteSpace(_editingItem.Name)) return;
+
+        var cat = _categories?.FirstOrDefault(c => c.CategoryId == _editingItem.CategoryId);
+        if (cat != null) _editingItem.CategoryName = cat.Name;
+
+        if (_isEdit)
+        {
+            await ManageMenuUseCase.UpdateMenuItemAsync(_editingItem);
+            _message = $"Đã cập nhật thành công món '{_editingItem.Name}'.";
+        }
+        else
+        {
+            await ManageMenuUseCase.AddMenuItemAsync(_editingItem);
+            _message = $"Đã thêm mới thành công món '{_editingItem.Name}'.";
+        }
+
+        _showModal = false;
+        await LoadItems();
+    }
+
+    private async Task DeleteItem(int id)
+    {
+        await ManageMenuUseCase.DeleteMenuItemAsync(id);
+        _message = $"Đã xóa món #{id}.";
+        await LoadItems();
+    }
+}

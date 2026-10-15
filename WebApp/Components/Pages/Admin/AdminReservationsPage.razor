@@ -1,0 +1,167 @@
+@page "/admin/reservations"
+@attribute [Authorize(Roles = "Admin,Staff")]
+@inject IReservationRepository ReservationRepo
+@inject IDiningTableRepository TableRepo
+@inject ICancelReservationUseCase CancelReservationUseCase
+
+<PageTitle>Quản Lý Đặt Bàn - Quản Trị Nhà Hàng</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-4 border-bottom pb-3">
+        <div>
+            <span class="badge bg-danger text-white px-3 py-2 rounded-pill fw-bold text-uppercase">
+                <i class="bi bi-journal-bookmark-fill me-1"></i> Quản Trị Khách Đặt Bàn
+            </span>
+            <h2 class="fw-bold mt-2 mb-1">Danh Sách Khách Đặt Bàn Trước</h2>
+            <p class="text-muted mb-0">Theo dõi danh sách khách đặt bàn trực tuyến, tiếp nhận khách đến nhận bàn hoặc hủy lịch</p>
+        </div>
+
+        <button class="btn btn-outline-secondary rounded-pill px-3" @onclick="LoadReservations">
+            <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @_message
+            <button type="button" class="btn-close" @onclick="() => _message = null"></button>
+        </div>
+    }
+
+    @if (_reservations == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="text-muted mt-2">Đang tải danh sách đặt bàn...</p>
+        </div>
+    }
+    else if (!_reservations.Any())
+    {
+        <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white">
+            <i class="bi bi-calendar-x fs-1 text-muted opacity-50 mb-3"></i>
+            <h5 class="fw-bold text-dark">Chưa có lịch đặt bàn nào</h5>
+            <p class="text-muted mb-3">Khách hàng có thể đặt bàn trực tuyến qua trang Đặt Bàn.</p>
+            <div>
+                <a href="dat-ban" class="btn btn-primary rounded-pill px-4">
+                    Thử tạo lịch đặt bàn
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Mã #</th>
+                            <th>Bàn</th>
+                            <th>Khách hàng</th>
+                            <th>Số điện thoại</th>
+                            <th>Thời gian đến</th>
+                            <th>Số khách</th>
+                            <th>Ghi chú</th>
+                            <th>Trạng thái</th>
+                            <th class="text-end pe-3">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var res in _reservations)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-muted">#@res.ReservationId</td>
+                                <td>
+                                    <span class="fw-bold text-primary">@res.TableNumber</span>
+                                </td>
+                                <td class="fw-semibold text-dark">@res.CustomerName</td>
+                                <td>@res.PhoneNumber</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-clock me-1"></i> @res.ReservationTime.ToString("HH:mm dd/MM/yyyy")
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary rounded-pill">@res.GuestCount người</span>
+                                </td>
+                                <td class="small text-muted" style="max-width: 180px;">@res.Note</td>
+                                <td>
+                                    <span class="badge @GetBadgeClass(res.Status) rounded-pill px-3 py-2">
+                                        @GetStatusText(res.Status)
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    @if (res.Status == ReservationStatus.Confirmed)
+                                    {
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-success" 
+                                                    title="Khách đã đến -> Nhận bàn và mở phục vụ"
+                                                    @onclick="() => CheckInReservation(res)">
+                                                <i class="bi bi-box-arrow-in-down-right me-1"></i> Nhận bàn
+                                            </button>
+                                            <button class="btn btn-outline-danger" 
+                                                    title="Hủy lịch đặt này"
+                                                    @onclick="() => CancelReservation(res.ReservationId)">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Reservation>? _reservations;
+    private string? _message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReservations();
+    }
+
+    private async Task LoadReservations()
+    {
+        var result = await ReservationRepo.GetAllReservationsAsync();
+        _reservations = result.ToList();
+    }
+
+    private async Task CheckInReservation(Reservation res)
+    {
+        // Chuyển reservation sang Completed
+        await ReservationRepo.UpdateReservationStatusAsync(res.ReservationId, ReservationStatus.Completed);
+        // Chuyển bàn sang Occupied
+        await TableRepo.UpdateTableStatusAsync(res.DiningTableId, TableStatus.Occupied);
+        _message = $"Đã tiếp nhận khách '{res.CustomerName}' vào {res.TableNumber} thành công!";
+        await LoadReservations();
+    }
+
+    private async Task CancelReservation(int id)
+    {
+        await CancelReservationUseCase.ExecuteAsync(id);
+        _message = $"Đã hủy lịch đặt bàn #{id}.";
+        await LoadReservations();
+    }
+
+    private string GetBadgeClass(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Confirmed => "bg-primary text-white",
+        ReservationStatus.Completed => "bg-success text-white",
+        ReservationStatus.Cancelled => "bg-secondary text-white",
+        _ => "bg-light text-dark"
+    };
+
+    private string GetStatusText(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Confirmed => "Đã xác nhận",
+        ReservationStatus.Completed => "Đã nhận bàn",
+        ReservationStatus.Cancelled => "Đã hủy",
+        _ => "Không rõ"
+    };
+}

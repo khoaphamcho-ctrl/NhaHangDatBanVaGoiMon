@@ -1,0 +1,124 @@
+@page "/admin/bill/{OrderId:int}"
+@attribute [Authorize(Roles = "Admin,Staff")]
+@inject IViewTableOrderUseCase ViewOrderUseCase
+@inject IRestaurantConfigRepository ConfigRepo
+
+<PageTitle>Hóa Đơn Thanh Toán - Nhà Hàng Cố Đô Huế</PageTitle>
+
+<div class="container py-4">
+    <div class="d-print-none mb-3 d-flex justify-content-between align-items-center">
+        <a href="admin/orders" class="btn btn-outline-secondary rounded-pill">
+            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách đơn
+        </a>
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" onclick="window.print()">
+            <i class="bi bi-printer-fill me-1"></i> In Hóa Đơn (Print)
+        </button>
+    </div>
+
+    @if (_order == null)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status"></div>
+            <p class="text-muted mt-2">Đang tải hóa đơn...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow border-0 p-4 p-md-5 mx-auto bg-white rounded-4" style="max-width: 650px;">
+            <!-- HEADER HÓA ĐƠN -->
+            <div class="text-center border-bottom pb-4 mb-4">
+                <div class="d-flex justify-content-center align-items-center gap-2 mb-1">
+                    <i class="bi bi-fire fs-2 text-danger"></i>
+                    <h4 class="fw-bold mb-0 text-dark">NHÀ HÀNG CỐ ĐÔ HUẾ</h4>
+                </div>
+                <div class="text-muted small">68 Lê Lợi, TP. Huế &bull; Hotline: 0905.888.999</div>
+                <div class="fw-bold mt-3 fs-5 text-uppercase" style="letter-spacing: 1px;">
+                    HÓA ĐƠN THANH TOÁN
+                </div>
+                <div class="small text-muted">
+                    Mã đơn: <strong>#@_order.TableOrderId</strong> &bull; Bàn: <strong>@_order.TableNumber</strong>
+                </div>
+                <div class="small text-muted">
+                    Giờ vào: @_order.OrderTime.ToString("HH:mm dd/MM/yyyy")
+                    @if (_order.ClosedAt.HasValue)
+                    {
+                        <span> &bull; Giờ đóng bàn: @_order.ClosedAt.Value.ToString("HH:mm dd/MM/yyyy")</span>
+                    }
+                </div>
+            </div>
+
+            <!-- BẢNG CHI TIẾT CÁC MÓN ĂN -->
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr class="border-bottom">
+                            <th>Tên món</th>
+                            <th class="text-center" style="width: 50px;">SL</th>
+                            <th class="text-end" style="width: 90px;">Đơn giá</th>
+                            <th class="text-end" style="width: 100px;">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in _order.Lines)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@line.MenuItemName</div>
+                                    @if (!string.IsNullOrWhiteSpace(line.SpecialInstructions))
+                                    {
+                                        <small class="text-muted fst-italic">(@line.SpecialInstructions)</small>
+                                    }
+                                </td>
+                                <td class="text-center">@line.Quantity</td>
+                                <td class="text-end">@line.UnitPrice.ToString("N0")</td>
+                                <td class="text-end fw-semibold">@line.LineTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TỔNG KẾT HÓA ĐƠN THEO LUẬT 2.3 -->
+            <div class="border-top pt-3 mb-4">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Tổng tiền món ăn:</span>
+                    <span class="fw-semibold">@_order.SubTotal.ToString("N0") đ</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Phí phục vụ (@_order.ServiceFeeRate%):</span>
+                    <span class="fw-semibold text-dark">+@_order.ServiceFeeAmount.ToString("N0") đ</span>
+                </div>
+                <hr class="my-2" />
+                <div class="d-flex justify-content-between align-items-baseline">
+                    <span class="fw-bold fs-5 text-dark">TỔNG CỘNG:</span>
+                    <span class="fw-bold fs-4 text-danger">@_order.TotalAmount.ToString("N0") đ</span>
+                </div>
+                <div class="small text-muted fst-italic mt-1 text-end">
+                    (Giá đã bao gồm phí phục vụ theo quy định nhà hàng)
+                </div>
+            </div>
+
+            <!-- FOOTER HÓA ĐƠN -->
+            <div class="text-center border-top pt-4">
+                <p class="fw-semibold mb-1">Cảm ơn Quý khách và Hẹn gặp lại!</p>
+                <small class="text-muted">Chúc Quý khách một bữa ăn ngon miệng cùng người thân và gia đình.</small>
+                <div class="mt-4 pt-2 d-flex justify-content-between text-muted small">
+                    <span>Thu ngân ký nhận</span>
+                    <span>Khách hàng ký nhận</span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private TableOrder? _order;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _order = await ViewOrderUseCase.GetOrderByIdAsync(OrderId);
+    }
+}

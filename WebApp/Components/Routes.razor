@@ -1,0 +1,46 @@
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                <div class="container py-5 text-center">
+                    <div class="card shadow border-0 p-5 mx-auto" style="max-width: 550px; border-radius: 20px;">
+                        <div class="mb-3">
+                            <i class="bi bi-shield-lock-fill text-danger" style="font-size: 3.5rem;"></i>
+                        </div>
+                        <h3 class="text-danger fw-bold mb-2">Truy Cập Bị Từ Chối</h3>
+                        <p class="text-muted mb-4">
+                            Bạn cần quyền <strong>Quản trị (Admin)</strong> hoặc <strong>Nhân viên (Staff)</strong> để truy cập khu vực này.
+                        </p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="/login" class="btn btn-primary px-4 py-2 rounded-pill">
+                                <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập tài khoản
+                            </a>
+                            <a href="/" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                                Quay về trang chủ
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </NotAuthorized>
+            <Authorizing>
+                <div class="container py-5 text-center">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Đang kiểm tra quyền truy cập hệ thống...</p>
+                </div>
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(Layout.MainLayout)">
+            <div class="container py-5 text-center">
+                <h1 class="display-1 fw-bold text-muted">404</h1>
+                <h4 class="fw-bold mb-3">Không tìm thấy trang yêu cầu</h4>
+                <p class="text-muted">Đường dẫn bạn truy cập không tồn tại hoặc đã được di chuyển.</p>
+                <a href="/" class="btn btn-primary rounded-pill px-4 py-2 mt-2">
+                    <i class="bi bi-house-door-fill me-1"></i> Quay về Trang chủ
+                </a>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

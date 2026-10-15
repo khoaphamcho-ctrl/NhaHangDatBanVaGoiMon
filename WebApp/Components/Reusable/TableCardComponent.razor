@@ -1,0 +1,85 @@
+@using CoreBusiness.Models
+@using CoreBusiness.Enums
+
+<div class="card h-100 shadow-sm border-2 transition-all cursor-pointer @(IsSelected ? "border-primary bg-primary-subtle" : "border-light-subtle")"
+     style="cursor: pointer; border-radius: 14px; transition: transform 0.2s, box-shadow 0.2s;"
+     @onclick="HandleClick">
+    <div class="card-body d-flex flex-column justify-content-between p-3">
+        <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="card-title fw-bold mb-0 text-dark">
+                    <i class="bi bi-displayport text-primary me-1"></i> @Table.TableNumber
+                </h5>
+                <span class="badge @GetStatusBadgeClass()">
+                    @GetStatusText()
+                </span>
+            </div>
+            
+            <p class="text-muted small mb-2">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i> @Table.Location
+            </p>
+
+            <div class="d-inline-flex align-items-center bg-light px-2 py-1 rounded-pill mb-2 border">
+                <i class="bi bi-people-fill text-secondary me-1"></i>
+                <span class="small fw-semibold text-secondary">Sức chứa: @Table.Capacity người</span>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Table.Description))
+            {
+                <p class="card-text text-secondary small fst-italic mb-0" style="font-size: 0.85rem;">
+                    @Table.Description
+                </p>
+            }
+        </div>
+
+        @if (ShowQuickAction)
+        {
+            <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+                <button class="btn btn-sm @(IsSelected ? "btn-primary" : "btn-outline-primary") w-100 rounded-pill"
+                        @onclick:stopPropagation="true"
+                        @onclick="HandleClick">
+                    <i class="bi @(IsSelected ? "bi-check-circle-fill" : "bi-hand-index-thumb") me-1"></i>
+                    @(IsSelected ? "Đã chọn bàn này" : "Chọn bàn này")
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DiningTable Table { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSelected { get; set; } = false;
+
+    [Parameter]
+    public bool ShowQuickAction { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<DiningTable> OnSelectTable { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (OnSelectTable.HasDelegate)
+        {
+            await OnSelectTable.InvokeAsync(Table);
+        }
+    }
+
+    private string GetStatusBadgeClass() => Table.Status switch
+    {
+        TableStatus.Available => "bg-success text-white",
+        TableStatus.Occupied => "bg-danger text-white",
+        TableStatus.Reserved => "bg-warning text-dark",
+        _ => "bg-secondary text-white"
+    };
+
+    private string GetStatusText() => Table.Status switch
+    {
+        TableStatus.Available => "Bàn trống",
+        TableStatus.Occupied => "Đang phục vụ",
+        TableStatus.Reserved => "Đã đặt trước",
+        _ => "Không xác định"
+    };
+}

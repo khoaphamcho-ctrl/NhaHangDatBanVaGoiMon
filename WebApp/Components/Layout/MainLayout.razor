@@ -1,0 +1,73 @@
+@inherits LayoutComponentBase
+
+<div class="d-flex flex-column min-vh-100">
+    <header>
+        <NavMenu />
+    </header>
+
+    <main class="flex-grow-1">
+        @Body
+    </main>
+
+    <footer class="bg-dark text-white pt-5 pb-4 mt-5 border-top border-secondary">
+        <div class="container">
+            <div class="row g-4 mb-4">
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="fw-bold mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-fire text-danger fs-4"></i> NHÀ HÀNG CỐ ĐÔ HUẾ
+                    </h5>
+                    <p class="text-white-50 small mb-2">
+                        Tinh hoa ẩm thực cung đình Huế và các món ăn dân dã truyền thống. Không gian sang trọng, ấm cúng và dịch vụ đặt bàn, gọi món trực tuyến tiện lợi.
+                    </p>
+                    <p class="text-warning small mb-0">
+                        <i class="bi bi-clock-fill me-1"></i> Giờ mở cửa: 09:00 - 22:30 hàng ngày
+                    </p>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="fw-bold text-uppercase mb-3 text-warning">Thông Tin Liên Hệ</h6>
+                    <ul class="list-unstyled text-white-50 small mb-0">
+                        <li class="mb-2"><i class="bi bi-geo-alt-fill text-danger me-2"></i> 68 Lê Lợi, TP. Huế</li>
+                        <li class="mb-2"><i class="bi bi-telephone-fill text-success me-2"></i> Hotline: 0905.888.999</li>
+                        <li class="mb-2"><i class="bi bi-envelope-fill text-primary me-2"></i> codohue@restaurant.vn</li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold text-uppercase mb-3 text-warning">Liên Kết Nhanh</h6>
+                    <ul class="list-unstyled text-white-50 small mb-0">
+                        <li class="mb-2"><a href="dat-ban" class="text-white-50 text-decoration-none">Đặt bàn trực tuyến</a></li>
+                        <li class="mb-2"><a href="menu" class="text-white-50 text-decoration-none">Xem thực đơn</a></li>
+                        <li class="mb-2"><a href="ai-assistant" class="text-white-50 text-decoration-none">Gợi ý AI</a></li>
+                        <li class="mb-2"><a href="login" class="text-white-50 text-decoration-none">Quản trị viên</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-lg-3 col-md-6">
+                    <h6 class="fw-bold text-uppercase mb-3 text-warning">Đồ Án Capstone ECO2415</h6>
+                    <div class="p-3 bg-secondary bg-opacity-25 rounded-3 border border-secondary border-opacity-50">
+                        <span class="badge bg-danger mb-2">ĐỀ TÀI SỐ 11</span>
+                        <div class="small text-white-50">
+                            <strong>Kiến trúc:</strong> 4 tầng Clean Architecture<br />
+                            <strong>Công nghệ:</strong> Blazor Server, SQL Dapper, In-Memory<br />
+                            <strong>Bảo vệ:</strong> 2 Luật nghiệp vụ, Rubric K1.1 - K5.3
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-secondary opacity-50" />
+            
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center text-white-50 small">
+                <span>&copy; 2026 Nhà Hàng Cố Đô Huế. All rights reserved.</span>
+                <span>Học phần Đồ Án Capstone - Trường Đại Học Kinh Tế Huế</span>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Đã xảy ra sự cố không mong muốn.
+    <a href="." class="reload">Tải lại</a>
+    <span class="dismiss">🗙</span>
+</div>

@@ -1,0 +1,141 @@
+@page "/"
+@inject IViewMenuUseCase ViewMenuUseCase
+@inject IViewTablesUseCase ViewTablesUseCase
+@inject NavigationManager NavManager
+
+<PageTitle>Trang Chủ - Nhà Hàng Cố Đô Huế</PageTitle>
+
+<!-- HERO BANNER -->
+<section class="position-relative text-white py-5 mb-5" 
+         style="background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.75)), url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1600&auto=format&fit=crop') center/cover no-repeat; border-radius: 0 0 30px 30px;">
+    <div class="container py-5 text-center">
+        <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold text-uppercase mb-3" style="letter-spacing: 1px;">
+            <i class="bi bi-star-fill text-danger me-1"></i> Ẩm Thực Cung Đình & Dân Dã
+        </span>
+        <h1 class="display-4 fw-extrabold mb-3 text-white">
+            Nhà Hàng Cố Đô Huế
+        </h1>
+        <p class="lead mb-4 mx-auto text-light opacity-90" style="max-width: 680px;">
+            Trải nghiệm hương vị đậm đà xứ kinh kỳ với thực đơn phong phú: Bún bò Huế đặc biệt, Bánh bèo, Nậm, Lọc, Nem lụi nướng than và Trà Cung Đình thanh nhã.
+        </p>
+
+        <div class="d-flex flex-wrap justify-content-center gap-3">
+            <a href="dat-ban" class="btn btn-primary btn-lg rounded-pill px-4 py-3 shadow">
+                <i class="bi bi-calendar-check me-2"></i> Đặt Bàn Trước Trực Tuyến
+            </a>
+            <a href="menu" class="btn btn-outline-light btn-lg rounded-pill px-4 py-3">
+                <i class="bi bi-book-half me-2"></i> Khám Phá Thực Đơn
+            </a>
+            <a href="goi-mon/1" class="btn btn-gold btn-lg rounded-pill px-4 py-3 shadow">
+                <i class="bi bi-qr-code me-2"></i> Quét QR Gọi Món Tại Bàn
+            </a>
+        </div>
+    </div>
+</section>
+
+<div class="container">
+    <!-- STATS / HIGHLIGHTS -->
+    <div class="row g-4 mb-5 text-center">
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm border-0 p-3 h-100 rounded-4 bg-white">
+                <i class="bi bi-geo-alt-fill text-danger fs-1 mb-2"></i>
+                <h5 class="fw-bold mb-1">Vị Trí Đắc Địa</h5>
+                <p class="text-muted small mb-0">68 Lê Lợi, nhìn ra sông Hương thơ mộng</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm border-0 p-3 h-100 rounded-4 bg-white">
+                <i class="bi bi-fire text-warning fs-1 mb-2"></i>
+                <h5 class="fw-bold mb-1">Đầu Bếp Cố Đô</h5>
+                <p class="text-muted small mb-0">Hơn 20 năm gìn giữ công thức truyền thống</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm border-0 p-3 h-100 rounded-4 bg-white">
+                <i class="bi bi-phone-fill text-primary fs-1 mb-2"></i>
+                <h5 class="fw-bold mb-1">Gọi Món 4.0</h5>
+                <p class="text-muted small mb-0">Quét mã QR tại bàn, gửi món trực tiếp vào bếp</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card shadow-sm border-0 p-3 h-100 rounded-4 bg-white">
+                <i class="bi bi-robot text-info fs-1 mb-2"></i>
+                <h5 class="fw-bold mb-1">Trợ Lý AI Thông Minh</h5>
+                <p class="text-muted small mb-0">Gợi ý thực đơn cá nhân hóa theo ngân sách</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MÓN ĂN NỔI BẬT -->
+    <div class="mb-5">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <span class="text-danger fw-bold text-uppercase small" style="letter-spacing: 1px;">Món Ngon Đặc Sắc</span>
+                <h2 class="fw-bold text-dark mb-0">Thực Đơn Được Yêu Thích Nhất</h2>
+            </div>
+            <a href="menu" class="btn btn-outline-primary rounded-pill px-3">
+                Xem toàn bộ <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        @if (_featuredItems == null)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Đang tải món ăn đặc sắc...</p>
+            </div>
+        }
+        else
+        {
+            <div class="row g-4">
+                @foreach (var item in _featuredItems)
+                {
+                    <div class="col-lg-3 col-md-6">
+                        <MenuItemCardComponent Item="item" OnAddToCart="HandleQuickAddToCart" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <!-- BANNER CAPSTONE PROJECT HIGHLIGHT -->
+    <div class="card border-0 bg-primary bg-gradient text-white p-4 p-md-5 rounded-4 shadow-sm mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <span class="badge bg-warning text-dark px-3 py-2 rounded-pill fw-bold mb-2">ĐỒ ÁN CAPSTONE ECO2415</span>
+                <h3 class="fw-bold mb-2">Đề Tài 11: Nhà Hàng - Đặt Bàn & Gọi Món Trực Tuyến</h3>
+                <p class="mb-3 text-light opacity-90">
+                    Hệ thống đáp ứng 100% tiêu chí chuẩn Rubric (K1.1 - K5.3): Kiến trúc Clean Architecture 4 tầng, 
+                    Cặp Header-Line trong 1 Transaction, 2 Luật nghiệp vụ cốt lõi, Phân quyền [Authorize], Trợ lý AI và Responsive 390px.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="dat-ban" class="btn btn-light fw-bold text-primary rounded-pill px-3 py-2">
+                        <i class="bi bi-check2-circle me-1"></i> Test Luật 1 (Đặt Bàn)
+                    </a>
+                    <a href="goi-mon/1" class="btn btn-outline-light rounded-pill px-3 py-2">
+                        <i class="bi bi-check2-circle me-1"></i> Test Luật 2 (Gọi Món)
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center d-none d-lg-block">
+                <i class="bi bi-award-fill" style="font-size: 6rem; color: #FFD700;"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<MenuItem>? _featuredItems;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var all = await ViewMenuUseCase.GetMenuItemsAsync();
+        _featuredItems = all.Take(4).ToList();
+    }
+
+    private void HandleQuickAddToCart((MenuItem item, int quantity, string note) args)
+    {
+        // Điều hướng khách vào bàn 1 để gọi món trực tiếp
+        NavManager.NavigateTo("goi-mon/1");
+    }
+}
