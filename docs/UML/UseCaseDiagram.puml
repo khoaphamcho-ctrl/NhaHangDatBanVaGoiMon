@@ -1,0 +1,37 @@
+@startuml UseCaseDiagram
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Khách Hàng\n(Customer)" as Customer
+actor "Nhân Viên / Quản Lý\n(Staff / Admin)" as Staff
+
+rectangle "Hệ Thống Nhà Hàng Cố Đô Huế (Đề Tài 11)" {
+    package "Phân Hệ Khách Hàng" {
+        usecase "Xem Thực Đơn & Tìm Kiếm Món" as UC_ViewMenu
+        usecase "Đặt Bàn Trực Tuyến" as UC_PlaceReservation
+        usecase "Quét QR & Gọi Món Tại Bàn" as UC_OrderFood
+        usecase "Tư Vấn Món Bằng AI" as UC_AiAdvice
+    }
+
+    package "Phân Hệ Quản Trị" {
+        usecase "Quản Lý Sơ Đồ Bàn (Floor Plan)" as UC_ManageTables
+        usecase "Tiếp Nhận & Check-in Đặt Bàn" as UC_CheckInReservation
+        usecase "Điều Phối Chế Biến & Bếp" as UC_KitchenDispatch
+        usecase "Thu Ngân, Tính Tiền & Đóng Bàn" as UC_CashierCloseTable
+        usecase "Quản Lý Thực Đơn (CRUD Món & Bật/Tắt Hết Hàng)" as UC_ManageMenu
+    }
+}
+
+Customer --> UC_ViewMenu
+Customer --> UC_PlaceReservation
+Customer --> UC_OrderFood
+Customer --> UC_AiAdvice
+
+Staff --> UC_ManageTables
+Staff --> UC_CheckInReservation
+Staff --> UC_KitchenDispatch
+Staff --> UC_CashierCloseTable
+Staff --> UC_ManageMenu
+
+@enduml

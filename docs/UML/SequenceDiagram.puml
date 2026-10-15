@@ -1,0 +1,67 @@
+@startuml SequenceDiagram
+autonumber
+skinparam responseMessageBelowArrow true
+
+actor "Khách Hàng" as User
+participant "TableOrderPage\n(.razor)" as UI
+participant "ITableCartService\n(Scoped)" as Cart
+participant "SubmitTableOrderUseCase\n(UseCases)" as UC
+participant "TableOrderBusinessRules\n(CoreBusiness)" as Rules
+participant "ITableOrderRepository\n(UseCases)" as Repo
+database "SQL Server / Dapper\n(Plugins.DataStore.SQL)" as DB
+
+User -> UI: Chọn món ăn và nhấn "Gửi Gọi Món Vào Bếp"
+activate UI
+
+UI -> UC: ExecuteAsync(tableId, note)
+activate UC
+
+UC -> Cart: GetCartItems(tableId)
+activate Cart
+Cart --> UC: List<CartItem>
+deactivate Cart
+
+UC -> Rules: ValidateCanOrderForTable(table, existingOrder)
+activate Rules
+Rules --> UC: Hợp lệ (Status == Open)
+deactivate Rules
+
+loop Với từng món trong giỏ
+    UC -> Rules: ValidateMenuItemAvailable(item)
+    activate Rules
+    Rules --> UC: Hợp lệ (IsAvailable == true)
+    deactivate Rules
+end
+
+UC -> Rules: CalculateOrderTotal(order, serviceFeeRate)
+activate Rules
+note right of Rules: SubTotal = Sum(Qty * Price)\nServiceFee = SubTotal * Fee%\nTotal = SubTotal + ServiceFee
+Rules --> UC: order đã tính tổng tiền
+deactivate Rules
+
+UC -> Repo: CreateOrUpdateOrderWithLinesAsync(order)
+activate Repo
+
+Repo -> DB: BeginTransaction()
+activate DB
+Repo -> DB: INSERT INTO TableOrders (Header)
+Repo -> DB: INSERT INTO TableOrderLines (Line 1..n)
+Repo -> DB: Commit()
+DB --> Repo: TableOrderId
+deactivate DB
+
+Repo --> UC: newOrderId
+deactivate Repo
+
+UC -> Cart: ClearCart(tableId)
+activate Cart
+Cart --> UC: void
+deactivate Cart
+
+UC --> UI: Trả về newOrderId thành công
+deactivate UC
+
+UI --> User: Hiển thị thông báo "Phiếu gọi món #ID đã gửi tới bếp thành công!"
+deactivate UI
+
+@enduml

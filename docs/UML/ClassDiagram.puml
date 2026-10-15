@@ -1,0 +1,93 @@
+@startuml ClassDiagram
+skinparam classAttributeIconSize 0
+
+package "CoreBusiness.Models" {
+    class DiningTable {
+        +int TableId
+        +string TableNumber
+        +int Capacity
+        +TableStatus Status
+        +string Location
+        +string Description
+    }
+
+    class Reservation {
+        +int ReservationId
+        +int DiningTableId
+        +string CustomerName
+        +string PhoneNumber
+        +DateTime ReservationTime
+        +int GuestCount
+        +ReservationStatus Status
+        +string Note
+        +DateTime CreatedAt
+    }
+
+    class MenuCategory {
+        +int CategoryId
+        +string Name
+        +string Description
+        +int DisplayOrder
+        +string Icon
+    }
+
+    class MenuItem {
+        +int MenuItemId
+        +int CategoryId
+        +string Name
+        +decimal Price
+        +string Description
+        +string ImageUrl
+        +bool IsAvailable
+        +string Unit
+    }
+
+    class TableOrder {
+        +int TableOrderId
+        +int DiningTableId
+        +DateTime OrderTime
+        +decimal SubTotal
+        +decimal ServiceFeeRate
+        +decimal ServiceFeeAmount
+        +decimal TotalAmount
+        +OrderStatus Status
+        +string Note
+        +DateTime? ClosedAt
+        +List<TableOrderLine> Lines
+        +RecalculateTotals()
+    }
+
+    class TableOrderLine {
+        +int TableOrderLineId
+        +int TableOrderId
+        +int MenuItemId
+        +string MenuItemName
+        +decimal UnitPrice
+        +int Quantity
+        +decimal LineTotal
+        +string SpecialInstructions
+        +OrderLineStatus Status
+    }
+}
+
+package "CoreBusiness.Rules" {
+    class ReservationBusinessRules <<static>> {
+        +ValidateCapacity(guestCount, table)
+        +ValidateTimeOverlap(time, tableId, name, reservations)
+    }
+
+    class TableOrderBusinessRules <<static>> {
+        +ValidateCanOrderForTable(table, currentOrder)
+        +ValidateMenuItemAvailable(item)
+        +ValidateOrderCanModify(order)
+        +CalculateOrderTotal(order, feeRate)
+    }
+}
+
+DiningTable "1" <-- "0..*" Reservation : thuộc về
+DiningTable "1" <-- "0..*" TableOrder : phục vụ
+MenuCategory "1" <-- "0..*" MenuItem : phân loại
+TableOrder "1" *-- "1..*" TableOrderLine : Cặp Header-Line
+MenuItem "1" <-- "0..*" TableOrderLine : chọn món
+
+@enduml
