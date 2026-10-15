@@ -1,0 +1,26 @@
+## .NET & Visual Studio
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+_ReSharper*/
+*.DotSettings.user
+
+## OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+
+## Large video files (do not push gigabytes of videos to git)
+videopart*/
+*.mp4
+*.wmv
+*.avi
+*.mkv
+*.iso
+*.exe
+!SQL2019-SSEI-Dev.exe
