@@ -2,42 +2,47 @@
 @inject NavigationManager NavManager
 @inject IAuthService AuthService
 
-<nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top" style="background: linear-gradient(135deg, #7E0E18 0%, #9B111E 100%);">
+<nav class="navbar navbar-expand-lg navbar-dark shadow-sm sticky-top custom-navbar">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-white fs-4" href="">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-white fs-4 py-1" href="">
             <i class="bi bi-fire fs-3" style="color: #FFD700;"></i>
             <span style="letter-spacing: 0.5px;">CỐ ĐÔ HUẾ</span>
         </a>
 
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#restaurantNavbar">
+        <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#restaurantNavbar" aria-controls="restaurantNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
         <div class="collapse navbar-collapse" id="restaurantNavbar">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0 fw-semibold">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 fw-semibold align-items-lg-center gap-lg-1 pt-2 pt-lg-0">
                 <li class="nav-item">
-                    <NavLink class="nav-link text-white px-3" href="" Match="NavLinkMatch.All">
-                        <i class="bi bi-house-door-fill me-1"></i> Trang Chủ
+                    <NavLink class="nav-link custom-nav-link text-white" href="" Match="NavLinkMatch.All">
+                        <i class="bi bi-house-door-fill"></i>
+                        <span>Trang Chủ</span>
                     </NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link text-white px-3" href="dat-ban">
-                        <i class="bi bi-calendar-check-fill me-1" style="color: #FFD700;"></i> Đặt Bàn Online
+                    <NavLink class="nav-link custom-nav-link text-white" href="dat-ban">
+                        <i class="bi bi-calendar-check-fill icon-gold"></i>
+                        <span>Đặt Bàn Online</span>
                     </NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link text-white px-3" href="menu">
-                        <i class="bi bi-egg-fried me-1"></i> Thực Đơn
+                    <NavLink class="nav-link custom-nav-link text-white" href="menu">
+                        <i class="bi bi-egg-fried icon-warm"></i>
+                        <span>Thực Đơn</span>
                     </NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link text-white px-3" href="goi-mon/1">
-                        <i class="bi bi-qr-code-scan me-1" style="color: #98FB98;"></i> Gọi Món Tại Bàn
+                    <NavLink class="nav-link custom-nav-link text-white" href="goi-mon/1">
+                        <i class="bi bi-qr-code-scan icon-green"></i>
+                        <span>Gọi Món Tại Bàn</span>
                     </NavLink>
                 </li>
                 <li class="nav-item">
-                    <NavLink class="nav-link text-white px-3" href="ai-assistant">
-                        <i class="bi bi-robot me-1" style="color: #87CEFA;"></i> Trợ Lý AI Gợi Ý
+                    <NavLink class="nav-link custom-nav-link text-white" href="ai-assistant">
+                        <i class="bi bi-robot icon-blue"></i>
+                        <span>Trợ Lý AI Gợi Ý</span>
                     </NavLink>
                 </li>
 
@@ -45,29 +50,34 @@
                 <AuthorizeView Roles="Admin,Staff">
                     <Authorized>
                         <li class="nav-item dropdown ms-lg-2">
-                            <a class="nav-link dropdown-toggle text-warning fw-bold px-3 bg-dark bg-opacity-25 rounded-pill" 
-                               href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-shield-shaded me-1"></i> Phân Hệ Quản Trị
+                            <a class="nav-link dropdown-toggle text-warning fw-bold px-3 py-2 bg-dark bg-opacity-25 rounded-pill d-inline-flex align-items-center gap-1" 
+                               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-shield-shaded"></i>
+                                <span>Phân Hệ Quản Trị</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="border-radius: 12px;">
                                 <li>
-                                    <NavLink class="dropdown-item py-2" href="admin/tables">
-                                        <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i> Sơ Đồ Bàn (Floor Plan)
+                                    <NavLink class="dropdown-item py-2 d-flex align-items-center gap-2" href="admin/tables">
+                                        <i class="bi bi-grid-3x3-gap-fill text-primary"></i>
+                                        <span>Sơ Đồ Bàn (Floor Plan)</span>
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink class="dropdown-item py-2" href="admin/orders">
-                                        <i class="bi bi-receipt text-danger me-2"></i> Đơn Bàn & Thu Ngân
+                                    <NavLink class="dropdown-item py-2 d-flex align-items-center gap-2" href="admin/orders">
+                                        <i class="bi bi-receipt text-danger"></i>
+                                        <span>Đơn Bàn & Thu Ngân</span>
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink class="dropdown-item py-2" href="admin/reservations">
-                                        <i class="bi bi-journal-bookmark-fill text-warning me-2"></i> Lịch Khách Đặt Bàn
+                                    <NavLink class="dropdown-item py-2 d-flex align-items-center gap-2" href="admin/reservations">
+                                        <i class="bi bi-journal-bookmark-fill text-warning"></i>
+                                        <span>Lịch Khách Đặt Bàn</span>
                                     </NavLink>
                                 </li>
                                 <li>
-                                    <NavLink class="dropdown-item py-2" href="admin/menu">
-                                        <i class="bi bi-card-checklist text-success me-2"></i> Quản Lý Món Ăn
+                                    <NavLink class="dropdown-item py-2 d-flex align-items-center gap-2" href="admin/menu">
+                                        <i class="bi bi-card-checklist text-success"></i>
+                                        <span>Quản Lý Món Ăn</span>
                                     </NavLink>
                                 </li>
                             </ul>
@@ -77,11 +87,11 @@
             </ul>
 
             <!-- KHU VỰC TÀI KHOẢN -->
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2 pb-2 pb-lg-0">
                 <AuthorizeView>
                     <Authorized>
                         <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-light dropdown-toggle rounded-pill px-3 py-1 d-flex align-items-center gap-1"
+                            <button class="btn btn-sm btn-outline-light dropdown-toggle rounded-pill px-3 py-1 d-inline-flex align-items-center gap-2"
                                     type="button" data-bs-toggle="dropdown">
                                 <i class="bi bi-person-circle fs-6"></i>
                                 <span>@context.User.Identity?.Name</span>
@@ -94,15 +104,17 @@
                                 </li>
                                 <li>
                                     <button class="dropdown-item text-danger py-2 d-flex align-items-center gap-2" @onclick="HandleLogout">
-                                        <i class="bi bi-box-arrow-right"></i> Đăng xuất
+                                        <i class="bi bi-box-arrow-right"></i>
+                                        <span>Đăng xuất</span>
                                     </button>
                                 </li>
                             </ul>
                         </div>
                     </Authorized>
                     <NotAuthorized>
-                        <a href="login" class="btn btn-sm btn-light fw-bold rounded-pill px-3 py-1 shadow-sm text-dark d-flex align-items-center gap-1">
-                            <i class="bi bi-box-arrow-in-right"></i> Đăng Nhập
+                        <a href="login" class="btn btn-sm btn-light fw-bold rounded-pill px-3 py-1 shadow-sm text-dark d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            <span>Đăng Nhập</span>
                         </a>
                     </NotAuthorized>
                 </AuthorizeView>
