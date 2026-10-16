@@ -171,18 +171,18 @@ INSERT INTO dbo.MenuCategories (Name, DisplayOrder, Description, Icon) VALUES
 
 -- Nạp món ăn
 INSERT INTO dbo.MenuItems (CategoryId, Name, Price, Description, ImageUrl, IsAvailable, Unit) VALUES
-(1, N'Mẹt Bánh Bèo Chén Huế (10 chén)', 65000, N'Bánh bèo bột gạo mềm mịn, tôm chấy đỏ cam thơm lừng, tóp mỡ giòn rụm và nước mắm ớt xanh ngọt cay.', 'https://images.unsplash.com/photo-1541544741938-0af808871cc0?w=600&auto=format&fit=crop', 1, N'Mẹt'),
-(1, N'Bánh Nậm Lá Dong (5 cái)', 45000, N'Bánh nậm gói lá dong truyền thống, nhân tôm thịt xay nhuyễn đậm đà, ăn kèm chả huế.', 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&auto=format&fit=crop', 1, N'Dĩa'),
-(1, N'Bánh Bột Lọc Tôm Thịt Gói Lá', 50000, N'Vỏ bánh trong veo dai mềm, nhân tôm sông tươi và thịt ba chỉ rim kẹo đậm đà.', 'https://images.unsplash.com/photo-1509722747041-616f39b57569?w=600&auto=format&fit=crop', 1, N'Dĩa'),
-(2, N'Bún Bò Huế Đặc Biệt (Càng Cua + Bắp Bò)', 85000, N'Nước dùng hầm xương bò 12 tiếng cùng sả và mắm ruốc Cố đô, bắp hoa bò mềm ngọt, chả cua Huế tươi ngon.', 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=600&auto=format&fit=crop', 1, N'Tô'),
-(2, N'Cơm Hến Cồn Hến Cố Đô', 55000, N'Cơm nguội kèm hến xào đậm đà, tóp mỡ chiên giòn, bắp chuối thái mỏng, ruốc thơm và ớt xào Huế.', 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop', 1, N'Phần'),
-(2, N'Mẹt Nem Lụi Nướng Than Hoa (8 cây)', 95000, N'Nem lụi quấn sả nướng vàng óng, ăn kèm rau sống vườn Huế, bánh tráng và nước chấm tương gan đậu béo ngậy.', 'https://images.unsplash.com/photo-1529042410759-befb1204b468?w=600&auto=format&fit=crop', 1, N'Mẹt'),
-(2, N'Cá Bống Thệ Kho Tộ Niêu Đất', 120000, N'Cá bống thệ sông Hương kho tiêu cay nồng trong tộ đất, thịt chắc bùi béo ngậy.', 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=600&auto=format&fit=crop', 0, N'Tộ'), -- Món đã hết hàng
-(3, N'Gỏi Vả Trộn Tôm Thịt Bánh Tráng Mè', 75000, N'Trái vả non luộc chín thái mỏng trộn cùng tôm sông, thịt ba rọi và rau răm, xúc bánh tráng nướng giòn.', 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=600&auto=format&fit=crop', 1, N'Đĩa'),
-(4, N'Chè Hạt Sen Long Nhãn Cung Đình', 40000, N'Hạt sen hồ Tịnh Tâm bùi dẻo bọc trong cùi long nhãn giòn ngọt, nước đường phèn thanh mát.', 'https://images.unsplash.com/photo-1505253758473-96b3d5ebcd96?w=600&auto=format&fit=crop', 1, N'Chén'),
-(4, N'Chè Bột Lọc Heo Quay Đặc Sản', 45000, N'Món chè độc nhất vô nhị xứ Huế, vị ngọt thanh của nước đường gừng kết hợp vị béo mặn của thịt heo quay giòn bì.', 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&auto=format&fit=crop', 1, N'Chén'),
-(5, N'Ấm Trà Cung Đình Nhất Dạ Đế Vương', 60000, N'Ấm trà thảo mộc 16 vị quý (atiso, cúc hoa, đẳng sâm, cỏ ngọt, tim sen...) bồi bổ sức khỏe và thanh lọc cơ thể.', 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=600&auto=format&fit=crop', 1, N'Ấm'),
-(5, N'Nước Mía Ép Quất Huế Ướp Lạnh', 25000, N'Mía ngọt thanh kết hợp vị chua dịu thơm mát của tắc tươi.', 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop', 1, N'Ly');
+(1, N'Mẹt Bánh Bèo Chén Huế (10 chén)', 65000, N'Bánh bèo bột gạo mềm mịn, tôm chấy đỏ cam thơm lừng, tóp mỡ giòn rụm và nước mắm ớt xanh ngọt cay.', 'images/dishes/banh-beo.jpg', 1, N'Mẹt'),
+(1, N'Bánh Nậm Lá Dong (5 cái)', 45000, N'Bánh nậm gói lá dong truyền thống, nhân tôm thịt xay nhuyễn đậm đà, ăn kèm chả huế.', 'images/dishes/banh-nam.jpg', 1, N'Dĩa'),
+(1, N'Bánh Bột Lọc Tôm Thịt Gói Lá', 50000, N'Vỏ bánh trong veo dai mềm, nhân tôm sông tươi và thịt ba chỉ rim kẹo đậm đà.', 'images/dishes/banh-bot-loc.jpg', 1, N'Dĩa'),
+(2, N'Bún Bò Huế Đặc Biệt (Càng Cua + Bắp Bò)', 85000, N'Nước dùng hầm xương bò 12 tiếng cùng sả và mắm ruốc Cố đô, bắp hoa bò mềm ngọt, chả cua Huế tươi ngon.', 'images/dishes/bun-bo-hue.jpg', 1, N'Tô'),
+(2, N'Cơm Hến Cồn Hến Cố Đô', 55000, N'Cơm nguội kèm hến xào đậm đà, tóp mỡ chiên giòn, bắp chuối thái mỏng, ruốc thơm và ớt xào Huế.', 'images/dishes/com-hen.jpg', 1, N'Phần'),
+(2, N'Mẹt Nem Lụi Nướng Than Hoa (8 cây)', 95000, N'Nem lụi quấn sả nướng vàng óng, ăn kèm rau sống vườn Huế, bánh tráng và nước chấm tương gan đậu béo ngậy.', 'images/dishes/nem-lui.jpg', 1, N'Mẹt'),
+(2, N'Cá Bống Thệ Kho Tộ Niêu Đất', 120000, N'Cá bống thệ sông Hương kho tiêu cay nồng trong tộ đất, thịt chắc bùi béo ngậy.', 'images/dishes/ca-bong-kho-to.jpg', 0, N'Tộ'), -- Món đã hết hàng
+(3, N'Gỏi Vả Trộn Tôm Thịt Bánh Tráng Mè', 75000, N'Trái vả non luộc chín thái mỏng trộn cùng tôm sông, thịt ba rọi và rau răm, xúc bánh tráng nướng giòn.', 'images/dishes/goi-va.jpg', 1, N'Đĩa'),
+(4, N'Chè Hạt Sen Long Nhãn Cung Đình', 40000, N'Hạt sen hồ Tịnh Tâm bùi dẻo bọc trong cùi long nhãn giòn ngọt, nước đường phèn thanh mát.', 'images/dishes/che-hat-sen.jpg', 1, N'Chén'),
+(4, N'Chè Bột Lọc Heo Quay Đặc Sản', 45000, N'Món chè độc nhất vô nhị xứ Huế, vị ngọt thanh của nước đường gừng kết hợp vị béo mặn của thịt heo quay giòn bì.', 'images/dishes/che-bot-loc-heo-quay.jpg', 1, N'Chén'),
+(5, N'Ấm Trà Cung Đình Nhất Dạ Đế Vương', 60000, N'Ấm trà thảo mộc 16 vị quý (atiso, cúc hoa, đẳng sâm, cỏ ngọt, tim sen...) bồi bổ sức khỏe và thanh lọc cơ thể.', 'images/dishes/tra-cung-dinh.jpg', 1, N'Ấm'),
+(5, N'Nước Mía Ép Quất Huế Ướp Lạnh', 25000, N'Mía ngọt thanh kết hợp vị chua dịu thơm mát của tắc tươi.', 'images/dishes/nuoc-mia-quat.jpg', 1, N'Ly');
 
 -- Nạp đặt bàn mẫu
 INSERT INTO dbo.Reservations (DiningTableId, CustomerName, PhoneNumber, ReservationTime, GuestCount, Status, Note) VALUES
