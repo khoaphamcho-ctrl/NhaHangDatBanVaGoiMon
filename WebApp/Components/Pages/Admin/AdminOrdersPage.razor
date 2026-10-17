@@ -147,6 +147,9 @@
                                             @onclick="() => CloseAndPayOrder(order.TableOrderId)">
                                         <i class="bi bi-cash-stack me-1"></i> Thanh Toán & Đóng Bàn
                                     </button>
+                                    <a href="thanh-toan/@order.DiningTableId" class="btn btn-outline-success rounded-pill px-3 py-2" title="Thu ngân bàn với VietQR / Voucher">
+                                        <i class="bi bi-qr-code me-1"></i> QR / Thu Ngân
+                                    </a>
                                 }
                                 <a href="admin/bill/@order.TableOrderId" class="btn btn-outline-secondary rounded-pill px-3 py-2" target="_blank" title="In hóa đơn">
                                     <i class="bi bi-printer me-1"></i> In Bill

@@ -1,0 +1,688 @@
+@page "/thanh-toan/{TableId:int}"
+@inject IViewTablesUseCase ViewTablesUseCase
+@inject IViewTableOrderUseCase ViewTableOrderUseCase
+@inject ICloseTableOrderUseCase CloseTableOrderUseCase
+@inject IRestaurantConfigRepository ConfigRepo
+@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Thanh Toán Hóa Đơn - Bàn @(_table?.TableNumber ?? TableId.ToString()) - Nhà Hàng Cố Đô Huế</PageTitle>
+
+<div class="container py-3 py-md-4">
+    <!-- NÚT ĐIỀU HƯỚNG VÀ TIÊU ĐỀ TRANG -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 border-bottom pb-3">
+        <div class="d-flex align-items-center gap-3">
+            <a href="goi-mon/@TableId" class="btn btn-outline-secondary rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 42px; height: 42px;" title="Quay lại bàn gọi món">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </a>
+            <div>
+                <span class="badge bg-danger text-white px-3 py-1 rounded-pill fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                    <i class="bi bi-wallet2 me-1"></i> Thanh Toán & Đóng Bàn
+                </span>
+                <h3 class="fw-bold mb-0 text-dark mt-1">Thanh Toán Hóa Đơn - @(_table?.TableNumber ?? $"Bàn {TableId}")</h3>
+                <small class="text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i>@(_table?.Location ?? "Sảnh tiệc") &bull; Hotline hỗ trợ: 0905.888.999</small>
+            </div>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <a href="menu" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                <i class="bi bi-book-half me-1"></i> Xem Thực Đơn
+            </a>
+            <a href="goi-mon/@TableId" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                <i class="bi bi-qr-code me-1"></i> Gọi Thêm Món
+            </a>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-danger" role="status" style="width: 3rem; height: 3rem;"></div>
+            <p class="text-muted mt-3 fw-semibold">Đang chuẩn bị bảng kê hóa đơn bàn @TableId...</p>
+        </div>
+    }
+    else if (_activeOrder == null || !_activeOrder.Lines.Any())
+    {
+        <!-- TRƯỜNG HỢP BÀN CHƯA CÓ ĐƠN HOẶC ĐƠN RỖNG -->
+        <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white mx-auto my-4" style="max-width: 600px;">
+            <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 90px; height: 90px;">
+                <i class="bi bi-receipt-cutoff fs-1 text-muted"></i>
+            </div>
+            <h4 class="fw-bold text-dark mb-2">Bàn @(_table?.TableNumber ?? TableId.ToString()) hiện chưa có đơn gọi món</h4>
+            <p class="text-muted mb-4">Quý khách chưa gửi món ăn nào vào bếp để tạo hóa đơn thanh toán. Vui lòng vào trang gọi món để chọn các món ăn hấp dẫn.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="goi-mon/@TableId" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm fw-semibold">
+                    <i class="bi bi-cart-plus me-1"></i> Gọi Món Ngay
+                </a>
+                <a href="menu" class="btn btn-outline-secondary rounded-pill px-4 py-2">
+                    Khám Phá Menu
+                </a>
+            </div>
+        </div>
+    }
+    else if (_isPaymentSuccessful)
+    {
+        <!-- MÀN HÌNH THANH TOÁN THÀNH CÔNG (E-INVOICE RECEIPT) -->
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden mx-auto bg-white my-3" style="max-width: 680px;">
+            <div class="p-4 p-md-5 text-center text-white" style="background: linear-gradient(135deg, #198754 0%, #0f5132 100%);">
+                <div class="rounded-circle bg-white text-success d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 80px; height: 80px;">
+                    <i class="bi bi-check-lg fs-1 fw-bold"></i>
+                </div>
+                <h3 class="fw-bold mb-1">THANH TOÁN THÀNH CÔNG!</h3>
+                <p class="text-white-50 mb-0">Cảm ơn Quý khách đã thưởng thức ẩm thực tại Nhà Hàng Cố Đô Huế</p>
+                <div class="badge bg-white text-success rounded-pill px-3 py-2 mt-3 fw-bold fs-6 shadow-sm">
+                    Mã Hóa Đơn: @_eInvoiceCode
+                </div>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                <!-- THÔNG TIN TỔNG QUAN -->
+                <div class="bg-light rounded-3 p-3 mb-4 border">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="text-muted">Bàn phục vụ:</span>
+                            <div class="fw-bold text-dark">@(_table?.TableNumber ?? $"Bàn {TableId}")</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted">Thời gian thanh toán:</span>
+                            <div class="fw-bold text-dark">@DateTime.Now.ToString("HH:mm dd/MM/yyyy")</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Phương thức:</span>
+                            <div class="fw-bold text-primary">@_selectedPaymentMethod</div>
+                        </div>
+                        <div class="col-6 text-end">
+                            <span class="text-muted">Trạng thái:</span>
+                            <div><span class="badge bg-success">Đã hoàn tất & Đóng bàn</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BẢNG TÓM TẮT MÓN ĂN -->
+                <h6 class="fw-bold text-dark mb-2 text-uppercase small" style="letter-spacing: 0.5px;">Chi tiết món đã dùng (@_activeOrder.Lines.Count món):</h6>
+                <div class="table-responsive mb-3 border rounded-3">
+                    <table class="table table-sm table-borderless align-middle mb-0">
+                        <thead class="table-light border-bottom">
+                            <tr class="small text-muted">
+                                <th class="ps-3">Tên món</th>
+                                <th class="text-center">SL</th>
+                                <th class="text-end pe-3">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in _activeOrder.Lines)
+                            {
+                                <tr class="border-bottom border-light">
+                                    <td class="ps-3 py-2 fw-semibold text-dark">@line.MenuItemName</td>
+                                    <td class="text-center py-2 text-muted">×@line.Quantity</td>
+                                    <td class="text-end pe-3 py-2 fw-bold text-dark">@line.LineTotal.ToString("N0") đ</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- TỔNG KẾT TIỀN ĐÃ THANH TOÁN -->
+                <div class="border-top pt-3 mb-4">
+                    <div class="d-flex justify-content-between text-muted small mb-1">
+                        <span>Tổng tiền món:</span>
+                        <span>@_activeOrder.SubTotal.ToString("N0") đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mb-1">
+                        <span>Phí phục vụ (@_activeOrder.ServiceFeeRate%):</span>
+                        <span>+@_activeOrder.ServiceFeeAmount.ToString("N0") đ</span>
+                    </div>
+                    @if (_discountAmount > 0)
+                    {
+                        <div class="d-flex justify-content-between text-success small mb-1 fw-semibold">
+                            <span>Ưu đãi voucher (@_appliedVoucherCode):</span>
+                            <span>-@_discountAmount.ToString("N0") đ</span>
+                        </div>
+                    }
+                    @if (_includeVat)
+                    {
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>Thuế VAT (8%):</span>
+                            <span>+@_vatAmount.ToString("N0") đ</span>
+                        </div>
+                    }
+                    <hr class="my-2" />
+                    <div class="d-flex justify-content-between align-items-baseline">
+                        <span class="fw-bold fs-5 text-dark">TỔNG ĐÃ THANH TOÁN:</span>
+                        <span class="fw-bold fs-3 text-danger">@CalculateFinalTotal().ToString("N0") đ</span>
+                    </div>
+                </div>
+
+                <!-- ĐÁNH GIÁ TRẢI NGHIỆM -->
+                <div class="card bg-warning bg-opacity-10 border-warning border-opacity-25 rounded-4 p-3 mb-4 text-center">
+                    <h6 class="fw-bold text-dark mb-1">Quý khách có hài lòng với bữa ăn hôm nay?</h6>
+                    <div class="d-flex justify-content-center gap-2 my-2 fs-3 text-warning">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            int star = i;
+                            <i class="bi @(star <= _customerRating ? "bi-star-fill" : "bi-star")" 
+                               style="cursor: pointer;" 
+                               @onclick="() => SetRating(star)"></i>
+                        }
+                    </div>
+                    <small class="text-muted">Cảm nhận của bạn là động lực để Cố Đô Huế hoàn thiện hơn mỗi ngày!</small>
+                </div>
+
+                <!-- CÁC NÚT THAO TÁC -->
+                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                    <button class="btn btn-outline-dark rounded-pill px-4 py-2" @onclick="PrintReceipt">
+                        <i class="bi bi-printer me-1"></i> In Hóa Đơn (Print Bill)
+                    </button>
+                    <a href="" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm">
+                        <i class="bi bi-house-door me-1"></i> Về Trang Chủ
+                    </a>
+                    <a href="dat-ban" class="btn btn-gold rounded-pill px-4 py-2 shadow-sm">
+                        <i class="bi bi-calendar2-check me-1"></i> Đặt Bàn Lần Tới
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- GIAO DIỆN THANH TOÁN TIẾN HÀNH (CHECKOUT WORKFLOW) -->
+        <div class="row g-4">
+            <!-- CỘT BÊN TRÁI: DANH SÁCH MÓN ĂN & CHI TIẾT TẠM TÍNH -->
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+                    <div class="card-header bg-white border-bottom p-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <i class="bi bi-receipt text-danger"></i>
+                            <span>Bảng Kê Chi Tiết Món Ăn</span>
+                        </h5>
+                        <span class="badge bg-primary rounded-pill px-3 py-2">
+                            Đơn #@_activeOrder.TableOrderId
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr class="small text-muted">
+                                        <th class="ps-3 py-2">Món ăn</th>
+                                        <th class="text-center py-2" style="width: 60px;">SL</th>
+                                        <th class="text-end py-2" style="width: 100px;">Đơn giá</th>
+                                        <th class="text-end pe-3 py-2" style="width: 120px;">Thành tiền</th>
+                                        <th class="text-center py-2" style="width: 110px;">Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in _activeOrder.Lines)
+                                    {
+                                        <tr>
+                                            <td class="ps-3 py-3">
+                                                <div class="fw-bold text-dark">@line.MenuItemName</div>
+                                                @if (!string.IsNullOrWhiteSpace(line.SpecialInstructions))
+                                                {
+                                                    <small class="text-muted fst-italic"><i class="bi bi-chat-dots me-1"></i>@line.SpecialInstructions</small>
+                                                }
+                                            </td>
+                                            <td class="text-center fw-bold">@line.Quantity</td>
+                                            <td class="text-end text-muted">@line.UnitPrice.ToString("N0") đ</td>
+                                            <td class="text-end pe-3 fw-bold text-dark">@line.LineTotal.ToString("N0") đ</td>
+                                            <td class="text-center">
+                                                <span class="badge @GetLineStatusBadge(line.Status)">
+                                                    @GetLineStatusText(line.Status)
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- THẺ NHẬP MÃ GIẢM GIÁ & XUẤT VAT -->
+                    <div class="p-3 bg-light border-top">
+                        <div class="row g-3">
+                            <!-- MÃ GIẢM GIÁ -->
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark mb-1">
+                                    <i class="bi bi-ticket-perforated-fill text-danger me-1"></i> Mã ưu đãi / Voucher:
+                                </label>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" class="form-control text-uppercase fw-bold" 
+                                           placeholder="Nhập: CODO10, TRIAN50..." 
+                                           @bind="_voucherInput" />
+                                    <button class="btn btn-outline-danger fw-semibold px-3" type="button" @onclick="ApplyVoucher">
+                                        Áp dụng
+                                    </button>
+                                </div>
+                                @if (!string.IsNullOrEmpty(_voucherMessage))
+                                {
+                                    <div class="small mt-1 @(_discountAmount > 0 ? "text-success fw-semibold" : "text-danger")">
+                                        <i class="bi @(_discountAmount > 0 ? "bi-check-circle" : "bi-exclamation-circle") me-1"></i>@_voucherMessage
+                                    </div>
+                                }
+                                <div class="mt-1 d-flex gap-1 flex-wrap">
+                                    <span class="badge bg-white text-secondary border" style="cursor: pointer;" @onclick='() => SetVoucherCode("CODO10")'>Gợi ý: CODO10 (-10%)</span>
+                                    <span class="badge bg-white text-secondary border" style="cursor: pointer;" @onclick='() => SetVoucherCode("TRIAN50")'>TRIAN50 (-50k)</span>
+                                </div>
+                            </div>
+
+                            <!-- XUẤT HÓA ĐƠN VAT -->
+                            <div class="col-md-6 border-start-md">
+                                <div class="form-check form-switch mb-1">
+                                    <input class="form-check-input" type="checkbox" id="vatSwitch" @bind="_includeVat" />
+                                    <label class="form-check-label small fw-bold text-dark" for="vatSwitch">
+                                        Xuất hóa đơn đỏ điện tử (VAT 8%)
+                                    </label>
+                                </div>
+                                @if (_includeVat)
+                                {
+                                    <div class="mt-2 space-y-1">
+                                        <input type="text" class="form-control form-control-sm mb-1" placeholder="Tên công ty / Đơn vị" @bind="_companyName" />
+                                        <input type="text" class="form-control form-control-sm mb-1" placeholder="Mã số thuế (MST)" @bind="_taxCode" />
+                                        <input type="email" class="form-control form-control-sm" placeholder="Email nhận hóa đơn" @bind="_invoiceEmail" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <small class="text-muted d-block">Bật để nhập thông tin doanh nghiệp xuất e-Invoice hợp lệ.</small>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CỘT BÊN PHẢI: PHƯƠNG THỨC THANH TOÁN & NÚT XÁC NHẬN -->
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm rounded-4 bg-white p-3 p-md-4 sticky-top" style="top: 85px;">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-credit-card-2-front-fill text-primary"></i>
+                        <span>Phương Thức Thanh Toán</span>
+                    </h5>
+
+                    <!-- CHỌN PHƯƠNG THỨC (TAB SELECTION) -->
+                    <div class="d-flex flex-column gap-2 mb-3">
+                        <!-- 1. CHUYỂN KHOẢN QR -->
+                        <div class="border rounded-3 p-3 @(_selectedPaymentMethod == "Chuyển khoản QR (VietQR)" ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                             style="cursor: pointer;" 
+                             @onclick='() => SelectPaymentMethod("Chuyển khoản QR (VietQR)")'>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="radio" class="form-check-input mt-0" name="payMethod" checked="@(_selectedPaymentMethod == "Chuyển khoản QR (VietQR)")" />
+                                    <span class="fw-bold text-dark">Quét Mã VietQR Ngân Hàng</span>
+                                </div>
+                                <span class="badge bg-danger rounded-pill px-2">Khuyên dùng</span>
+                            </div>
+                            <small class="text-muted d-block ps-4 mt-1">Mã QR động tự điền STK & số tiền, quét được bằng 40+ App ngân hàng & MoMo.</small>
+                        </div>
+
+                        <!-- 2. TIỀN MẶT -->
+                        <div class="border rounded-3 p-3 @(_selectedPaymentMethod == "Tiền mặt tại bàn" ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                             style="cursor: pointer;" 
+                             @onclick='() => SelectPaymentMethod("Tiền mặt tại bàn")'>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="radio" class="form-check-input mt-0" name="payMethod" checked="@(_selectedPaymentMethod == "Tiền mặt tại bàn")" />
+                                    <span class="fw-bold text-dark">Tiền Mặt Tại Bàn</span>
+                                </div>
+                                <i class="bi bi-cash-stack fs-5 text-success"></i>
+                            </div>
+                            <small class="text-muted d-block ps-4 mt-1">Nhân viên thu ngân sẽ mang phiếu tính tiền và tiền thối lại tận bàn.</small>
+                        </div>
+
+                        <!-- 3. QUẸT THẺ POS -->
+                        <div class="border rounded-3 p-3 @(_selectedPaymentMethod == "Quẹt thẻ POS" ? "border-primary bg-primary bg-opacity-10" : "bg-light")" 
+                             style="cursor: pointer;" 
+                             @onclick='() => SelectPaymentMethod("Quẹt thẻ POS")'>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="radio" class="form-check-input mt-0" name="payMethod" checked="@(_selectedPaymentMethod == "Quẹt thẻ POS")" />
+                                    <span class="fw-bold text-dark">Quẹt Thẻ Ngân Hàng (POS)</span>
+                                </div>
+                                <i class="bi bi-credit-card fs-5 text-secondary"></i>
+                            </div>
+                            <small class="text-muted d-block ps-4 mt-1">Hỗ trợ quẹt thẻ Visa, Mastercard, JCB, thẻ ATM chip không tiếp xúc.</small>
+                        </div>
+                    </div>
+
+                    <!-- CHI TIẾT TƯƠNG ỨNG VỚI PHƯƠNG THỨC ĐÃ CHỌN -->
+                    @if (_selectedPaymentMethod == "Chuyển khoản QR (VietQR)")
+                    {
+                        <div class="card border border-primary border-opacity-25 rounded-4 p-3 bg-white mb-3 text-center">
+                            <div class="fw-bold text-dark mb-2">Quét mã QR để chuyển khoản nhanh:</div>
+                            
+                            <!-- HÌNH ẢNH MÃ VIETQR CHUẨN TỰ ĐỘNG SINH -->
+                            <div class="position-relative d-inline-block mx-auto mb-2 p-2 bg-white rounded-3 shadow-sm border" style="max-width: 220px;">
+                                <img src="@GetVietQrImageUrl()" 
+                                     alt="VietQR Payment Code" 
+                                     class="img-fluid rounded-2" 
+                                     style="width: 200px; height: 200px; object-fit: contain;" />
+                            </div>
+
+                            <div class="bg-light p-2 rounded-3 text-start small mb-2 border">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Ngân hàng:</span>
+                                    <span class="fw-bold text-dark">MB Bank (Quân Đội)</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Số tài khoản:</span>
+                                    <span class="fw-bold text-danger">0905888999</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Chủ tài khoản:</span>
+                                    <span class="fw-semibold text-dark">NHA HANG CO DO HUE</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Số tiền:</span>
+                                    <span class="fw-bold text-danger fs-6">@CalculateFinalTotal().ToString("N0") đ</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Nội dung:</span>
+                                    <span class="fw-bold text-primary">@GetTransferContent()</span>
+                                </div>
+                            </div>
+                            <small class="text-muted fst-italic">Hệ thống sẽ tự động cập nhật và đóng bàn sau khi xác nhận.</small>
+                        </div>
+                    }
+                    else if (_selectedPaymentMethod == "Tiền mặt tại bàn")
+                    {
+                        <div class="card border rounded-3 p-3 bg-light mb-3">
+                            <label class="form-label small fw-bold text-dark mb-1">Số tiền khách đưa (tùy chọn):</label>
+                            <div class="d-flex gap-2 flex-wrap mb-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill @(_cashGiven == CalculateFinalTotal() ? "active" : "")" @onclick="() => _cashGiven = CalculateFinalTotal()">
+                                    Vừa đủ (@CalculateFinalTotal().ToString("N0") đ)
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill @(_cashGiven == 500000 ? "active" : "")" @onclick="() => _cashGiven = 500000">
+                                    500.000 đ
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill @(_cashGiven == 1000000 ? "active" : "")" @onclick="() => _cashGiven = 1000000">
+                                    1.000.000 đ
+                                </button>
+                            </div>
+                            @if (_cashGiven.HasValue && _cashGiven.Value > CalculateFinalTotal())
+                            {
+                                <div class="alert alert-info py-2 px-3 small rounded-3 mb-0">
+                                    Tiền thối lại cho khách: <strong>@((_cashGiven.Value - CalculateFinalTotal()).ToString("N0")) đ</strong>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card border rounded-3 p-3 bg-light mb-3 text-center">
+                            <i class="bi bi-terminal fs-1 text-primary mb-1"></i>
+                            <div class="fw-bold text-dark">Máy POS Di Động Sẵn Sàng</div>
+                            <small class="text-muted">Bấm nút bên dưới, nhân viên phục vụ sẽ mang máy quẹt thẻ tới tận bàn của Quý khách ngay lập tức.</small>
+                        </div>
+                    }
+
+                    <!-- TỔNG KẾT TÀI CHÍNH TRƯỚC KHI BẤM THANH TOÁN -->
+                    <div class="bg-light p-3 rounded-4 mb-3 border">
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>Tạm tính tiền món (@_activeOrder.Lines.Sum(l => l.Quantity) món):</span>
+                            <span class="fw-semibold text-dark">@_activeOrder.SubTotal.ToString("N0") đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted small mb-1">
+                            <span>Phí phục vụ (@_activeOrder.ServiceFeeRate%):</span>
+                            <span class="fw-semibold text-info">+@_activeOrder.ServiceFeeAmount.ToString("N0") đ</span>
+                        </div>
+                        @if (_discountAmount > 0)
+                        {
+                            <div class="d-flex justify-content-between text-success small mb-1">
+                                <span>Giảm giá ưu đãi:</span>
+                                <span class="fw-bold">-@_discountAmount.ToString("N0") đ</span>
+                            </div>
+                        }
+                        @if (_includeVat)
+                        {
+                            <div class="d-flex justify-content-between text-muted small mb-1">
+                                <span>Thuế GTGT VAT (8%):</span>
+                                <span class="fw-semibold text-dark">+@_vatAmount.ToString("N0") đ</span>
+                            </div>
+                        }
+                        <hr class="my-2" />
+                        <div class="d-flex justify-content-between align-items-baseline">
+                            <div>
+                                <span class="fw-bold text-dark fs-6">TỔNG THANH TOÁN:</span>
+                                <div class="text-muted" style="font-size: 0.75rem;">(Đã gồm phí dịch vụ theo quy định)</div>
+                            </div>
+                            <span class="fw-bold text-danger fs-3">@CalculateFinalTotal().ToString("N0") đ</span>
+                        </div>
+                    </div>
+
+                    <!-- THÔNG BÁO LỖI NẾU CÓ -->
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger py-2 px-3 small rounded-3 mb-3">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> @_errorMessage
+                        </div>
+                    }
+
+                    <!-- NÚT HOÀN TẤT THANH TOÁN -->
+                    <button class="btn btn-success w-100 py-3 rounded-pill fw-bold fs-5 shadow d-flex align-items-center justify-content-center gap-2"
+                            disabled="@_isProcessing"
+                            @onclick="ProcessPayment">
+                        @if (_isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                            <span>Đang xử lý giao dịch...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2-circle fs-4"></i>
+                            <span>Xác Nhận Thanh Toán</span>
+                        }
+                    </button>
+
+                    <div class="text-center mt-2">
+                        <small class="text-muted">
+                            <i class="bi bi-shield-lock me-1"></i> Giao dịch bảo mật chuẩn mã hóa SSL 256-bit
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int TableId { get; set; }
+
+    private DiningTable? _table;
+    private TableOrder? _activeOrder;
+    private bool _isLoading = true;
+    private bool _isProcessing = false;
+    private bool _isPaymentSuccessful = false;
+    private string? _errorMessage;
+
+    // Quản lý phương thức thanh toán
+    private string _selectedPaymentMethod = "Chuyển khoản QR (VietQR)";
+    private decimal? _cashGiven;
+
+    // Quản lý Voucher & Giảm giá
+    private string _voucherInput = string.Empty;
+    private string? _appliedVoucherCode;
+    private decimal _discountAmount = 0;
+    private string? _voucherMessage;
+
+    // Quản lý Hóa đơn VAT
+    private bool _includeVat = false;
+    private decimal _vatAmount => _includeVat ? Math.Round(((_activeOrder?.SubTotal ?? 0) - _discountAmount) * 0.08m, 0) : 0;
+    private string _companyName = string.Empty;
+    private string _taxCode = string.Empty;
+    private string _invoiceEmail = string.Empty;
+
+    // Hóa đơn hoàn tất
+    private string _eInvoiceCode = string.Empty;
+    private int _customerRating = 5;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _table = await ViewTablesUseCase.ExecuteAsync(TableId);
+            _activeOrder = await ViewTableOrderUseCase.GetActiveOrderByTableIdAsync(TableId);
+
+            if (_activeOrder != null)
+            {
+                _cashGiven = CalculateFinalTotal();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Không thể tải thông tin đơn bàn: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void SelectPaymentMethod(string method)
+    {
+        _selectedPaymentMethod = method;
+    }
+
+    private void SetVoucherCode(string code)
+    {
+        _voucherInput = code;
+        ApplyVoucher();
+    }
+
+    private void ApplyVoucher()
+    {
+        if (string.IsNullOrWhiteSpace(_voucherInput))
+        {
+            _discountAmount = 0;
+            _appliedVoucherCode = null;
+            _voucherMessage = "Vui lòng nhập mã ưu đãi.";
+            return;
+        }
+
+        string code = _voucherInput.Trim().ToUpperInvariant();
+        if (code == "CODO10")
+        {
+            _discountAmount = Math.Round((_activeOrder?.SubTotal ?? 0) * 0.10m, 0);
+            _appliedVoucherCode = code;
+            _voucherMessage = $"Áp dụng thành công mã CODO10: Giảm 10% tiền món (-{_discountAmount:N0} đ)!";
+        }
+        else if (code == "TRIAN50")
+        {
+            _discountAmount = 50000;
+            _appliedVoucherCode = code;
+            _voucherMessage = "Áp dụng thành công mã TRIAN50: Giảm ngay 50.000 đ vào hóa đơn!";
+        }
+        else if (code == "FREEFEE")
+        {
+            _discountAmount = _activeOrder?.ServiceFeeAmount ?? 0;
+            _appliedVoucherCode = code;
+            _voucherMessage = "Áp dụng thành công mã FREEFEE: Miễn phí 100% phí phục vụ!";
+        }
+        else
+        {
+            _discountAmount = 0;
+            _appliedVoucherCode = null;
+            _voucherMessage = "Mã ưu đãi không hợp lệ hoặc đã hết hạn.";
+        }
+    }
+
+    private decimal CalculateFinalTotal()
+    {
+        if (_activeOrder == null) return 0;
+        decimal total = _activeOrder.TotalAmount - _discountAmount + _vatAmount;
+        return total > 0 ? total : 0;
+    }
+
+    private string GetTransferContent()
+    {
+        return $"CODO BAN{TableId} HD{_activeOrder?.TableOrderId}";
+    }
+
+    private string GetVietQrImageUrl()
+    {
+        decimal amount = CalculateFinalTotal();
+        string addInfo = Uri.EscapeDataString(GetTransferContent());
+        string accountName = Uri.EscapeDataString("NHA HANG CO DO HUE");
+        return $"https://api.vietqr.io/image/970422-0905888999-compact.png?amount={(long)amount}&addInfo={addInfo}&accountName={accountName}";
+    }
+
+    private async Task ProcessPayment()
+    {
+        if (_activeOrder == null) return;
+
+        _isProcessing = true;
+        _errorMessage = null;
+
+        try
+        {
+            decimal finalAmount = CalculateFinalTotal();
+            string methodDetails = _selectedPaymentMethod;
+            if (_selectedPaymentMethod == "Tiền mặt tại bàn" && _cashGiven.HasValue)
+            {
+                methodDetails += $" (Khách đưa: {_cashGiven.Value:N0} đ, Thối: {(_cashGiven.Value - finalAmount):N0} đ)";
+            }
+            if (_discountAmount > 0)
+            {
+                methodDetails += $" | Voucher {_appliedVoucherCode}: -{_discountAmount:N0} đ";
+            }
+            if (_includeVat)
+            {
+                methodDetails += $" | Xuất VAT: {_companyName} - MST: {_taxCode}";
+            }
+
+            // GỌI USECASE ĐÓNG BÀN & CẬP NHẬT TRẠNG THÁI (LUẬT 2)
+            await CloseTableOrderUseCase.ExecuteAsync(_activeOrder.TableOrderId, methodDetails, finalAmount);
+
+            // Tạo mã hóa đơn điện tử
+            _eInvoiceCode = $"HD-CODO-{DateTime.Now:yyyyMMdd}-{_activeOrder.TableOrderId:D4}";
+            _isPaymentSuccessful = true;
+        }
+        catch (DomainException dex)
+        {
+            _errorMessage = dex.Message;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Lỗi xử lý thanh toán: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+
+    private void SetRating(int rating)
+    {
+        _customerRating = rating;
+    }
+
+    private async Task PrintReceipt()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private string GetLineStatusBadge(OrderLineStatus status) => status switch
+    {
+        OrderLineStatus.SentToKitchen => "bg-secondary text-white",
+        OrderLineStatus.Cooking => "bg-warning text-dark",
+        OrderLineStatus.Served => "bg-success text-white",
+        _ => "bg-light text-dark"
+    };
+
+    private string GetLineStatusText(OrderLineStatus status) => status switch
+    {
+        OrderLineStatus.SentToKitchen => "Đã gửi bếp",
+        OrderLineStatus.Cooking => "Đang nấu",
+        OrderLineStatus.Served => "Đã phục vụ",
+        _ => "Chờ"
+    };
+}

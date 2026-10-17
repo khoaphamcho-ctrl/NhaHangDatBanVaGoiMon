@@ -75,8 +75,13 @@ public class GetAiFoodAdviceUseCase : IGetAiFoodAdviceUseCase
                 runningTotal += app.Price;
             }
 
-            // 2. Món chính (Món Huế đặc trưng, Bún bò, Cơm hến, Thịt, Nem lụi...)
-            var mains = allItems.Where(i => i.CategoryName.Contains("Món chính") || i.CategoryName.Contains("Bún") || i.CategoryName.Contains("Cơm") || i.Price >= 60000).ToList();
+            // 2. Món chính (Đặc sản Huế, Bắc - Nam, Hải sản nướng, Cơm niêu, Lẩu...)
+            var mains = allItems.Where(i => i.CategoryName.Contains("Đặc Sản") || 
+                                            i.CategoryName.Contains("Bắc - Nam") || 
+                                            i.CategoryName.Contains("Hải Sản") || 
+                                            i.CategoryName.Contains("Lẩu") || 
+                                            i.CategoryName.Contains("Món Chính") || 
+                                            i.Price >= 65000).ToList();
             int mainTargetCount = Math.Max(1, request.GuestCount);
 
             foreach (var main in mains.OrderBy(x => Guid.NewGuid()))
@@ -89,8 +94,11 @@ public class GetAiFoodAdviceUseCase : IGetAiFoodAdviceUseCase
                 }
             }
 
-            // 3. Đồ uống / Tráng miệng (Chè Huế, Trà cung đình...)
-            var drinks = allItems.Where(i => i.CategoryName.Contains("Nước") || i.CategoryName.Contains("Tráng miệng") || i.CategoryName.Contains("Chè")).ToList();
+            // 3. Đồ uống / Tráng miệng (Chè Huế, Bánh flan, Trà đào, Cà phê muối...)
+            var drinks = allItems.Where(i => i.CategoryName.Contains("Đồ Uống") || 
+                                             i.CategoryName.Contains("Trà") || 
+                                             i.CategoryName.Contains("Tráng miệng") || 
+                                             i.CategoryName.Contains("Chè")).ToList();
             if (drinks.Any() && runningTotal < request.Budget)
             {
                 var drk = drinks.OrderBy(x => Guid.NewGuid()).First();

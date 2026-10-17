@@ -10,11 +10,14 @@ public class MenuCategoryInMemoryRepository : IMenuCategoryRepository
 {
     private static readonly List<MenuCategory> _categories = new()
     {
-        new MenuCategory { CategoryId = 1, Name = "Bánh Cố Đô Huế", DisplayOrder = 1, Description = "Các món bánh bèo, nậm, lọc đặc trưng truyền thống", Icon = "bi-disc" },
-        new MenuCategory { CategoryId = 2, Name = "Món Chính & Đặc Sản", DisplayOrder = 2, Description = "Bún bò Huế, Cơm hến, Nem lụi, Vịt nướng", Icon = "bi-fire" },
-        new MenuCategory { CategoryId = 3, Name = "Khai Vị & Gỏi", DisplayOrder = 3, Description = "Gỏi vả tôm thịt, Cuốn diếp, Chả tôm", Icon = "bi-egg-fried" },
-        new MenuCategory { CategoryId = 4, Name = "Tráng Miệng & Chè Cung Đình", DisplayOrder = 4, Description = "Chè hạt sen long nhãn, chè bột lọc bọc heo quay", Icon = "bi-flower1" },
-        new MenuCategory { CategoryId = 5, Name = "Đồ Uống & Trà Cung Đình", DisplayOrder = 5, Description = "Trà Cung Đình Huế, Nước mát, Nước ép tươi", Icon = "bi-cup-straw" }
+        new MenuCategory { CategoryId = 1, Name = "Bánh Cố Đô Huế", DisplayOrder = 1, Description = "Các món bánh bèo, nậm, lọc đặc trưng truyền thống xứ Huế", Icon = "bi-disc" },
+        new MenuCategory { CategoryId = 2, Name = "Đặc Sản Huế & Miền Trung", DisplayOrder = 2, Description = "Bún bò Huế, Cơm hến, Nem lụi, Mì Quảng, Bánh xèo miền Trung", Icon = "bi-fire" },
+        new MenuCategory { CategoryId = 3, Name = "Món Ngon Bắc - Nam", DisplayOrder = 3, Description = "Phở bò thố đá, Bún chả Hà Nội, Cơm tấm Sài Gòn, Bò lúc lắc", Icon = "bi-stars" },
+        new MenuCategory { CategoryId = 4, Name = "Hải Sản & Món Nướng", DisplayOrder = 4, Description = "Tôm sú nướng muối ớt, Mực một nắng sa tế, Cá hồi áp chảo", Icon = "bi-water" },
+        new MenuCategory { CategoryId = 5, Name = "Cơm Niêu, Lẩu & Món Gia Đình", DisplayOrder = 5, Description = "Cơm niêu kho quẹt, Lẩu Thái hải sản, Canh chua cá bớp", Icon = "bi-cup-hot-fill" },
+        new MenuCategory { CategoryId = 6, Name = "Khai Vị & Gỏi / Salad", DisplayOrder = 6, Description = "Gỏi vả tôm thịt, Salad rong nho mè rang, Nem hải sản chiên xù", Icon = "bi-egg-fried" },
+        new MenuCategory { CategoryId = 7, Name = "Tráng Miệng & Chè Cung Đình", DisplayOrder = 7, Description = "Chè hạt sen long nhãn, chè heo quay, Bánh flan caramel cốt dừa, Trái cây", Icon = "bi-flower1" },
+        new MenuCategory { CategoryId = 8, Name = "Đồ Uống, Trà & Cà Phê", DisplayOrder = 8, Description = "Trà Cung Đình Huế, Cà phê muối, Trà đào cam sả, Sinh tố bơ", Icon = "bi-cup-straw" }
     };
 
     public Task<IEnumerable<MenuCategory>> GetAllCategoriesAsync()

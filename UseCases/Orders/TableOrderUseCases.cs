@@ -174,11 +174,11 @@ public class SubmitTableOrderUseCase : ISubmitTableOrderUseCase
 
 public interface ICloseTableOrderUseCase
 {
-    Task ExecuteAsync(int orderId);
+    Task ExecuteAsync(int orderId, string paymentMethod = "Tiền mặt", decimal? finalTotal = null);
 }
 
 /// <summary>
-/// Thu ngân thanh toán, tính tiền và đóng bàn
+/// Thu ngân hoặc Khách hàng thanh toán, tính tiền hóa đơn và đóng bàn (Luật 2)
 /// </summary>
 public class CloseTableOrderUseCase : ICloseTableOrderUseCase
 {
@@ -196,7 +196,7 @@ public class CloseTableOrderUseCase : ICloseTableOrderUseCase
         _configRepo = configRepo;
     }
 
-    public async Task ExecuteAsync(int orderId)
+    public async Task ExecuteAsync(int orderId, string paymentMethod = "Tiền mặt", decimal? finalTotal = null)
     {
         var order = await _orderRepo.GetOrderByIdAsync(orderId);
         if (order == null)
@@ -212,6 +212,18 @@ public class CloseTableOrderUseCase : ICloseTableOrderUseCase
         // Tính lại hóa đơn cuối cùng
         var serviceFeeRate = await _configRepo.GetServiceFeeRateAsync();
         TableOrderBusinessRules.CalculateOrderTotal(order, serviceFeeRate);
+
+        if (finalTotal.HasValue && finalTotal.Value > 0)
+        {
+            order.TotalAmount = finalTotal.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(paymentMethod))
+        {
+            order.Note = string.IsNullOrWhiteSpace(order.Note) 
+                ? $"Thanh toán: {paymentMethod}" 
+                : $"{order.Note} | Thanh toán: {paymentMethod}";
+        }
 
         // Đóng đơn hàng và giải phóng bàn về trạng thái Available
         await _orderRepo.CloseOrderAndTableAsync(orderId, order.DiningTableId, order.TotalAmount);
