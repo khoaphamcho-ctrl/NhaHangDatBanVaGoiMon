@@ -1,7 +1,11 @@
+@page "/thanh-toan"
 @page "/thanh-toan/{TableId:int}"
 @inject IViewTablesUseCase ViewTablesUseCase
 @inject IViewTableOrderUseCase ViewTableOrderUseCase
 @inject ICloseTableOrderUseCase CloseTableOrderUseCase
+@inject ISubmitTableOrderUseCase SubmitTableOrderUseCase
+@inject ITableCartService CartService
+@inject IMenuItemRepository MenuItemRepo
 @inject IRestaurantConfigRepository ConfigRepo
 @inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
@@ -25,11 +29,31 @@
         </div>
 
         <div class="d-flex align-items-center gap-2">
+            <!-- Đổi bàn thanh toán nhanh -->
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle rounded-pill px-3" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-arrow-left-right me-1"></i> Đổi bàn (@(_table?.TableNumber ?? $"Bàn {TableId}"))
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="max-height: 250px; overflow-y: auto;">
+                    @if (_allTables != null)
+                    {
+                        @foreach (var t in _allTables)
+                        {
+                            <li>
+                                <a class="dropdown-item @(t.TableId == TableId ? "active fw-bold" : "")" 
+                                   href="thanh-toan/@t.TableId">
+                                    @t.TableNumber (@t.Location)
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+            </div>
             <a href="menu" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                <i class="bi bi-book-half me-1"></i> Xem Thực Đơn
+                <i class="bi bi-book-half me-1"></i> Menu
             </a>
-            <a href="goi-mon/@TableId" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                <i class="bi bi-qr-code me-1"></i> Gọi Thêm Món
+            <a href="goi-mon/@TableId" class="btn btn-sm btn-primary rounded-pill px-3 shadow-sm">
+                <i class="bi bi-qr-code me-1"></i> Gọi Món
             </a>
         </div>
     </div>
@@ -44,18 +68,18 @@
     else if (_activeOrder == null || !_activeOrder.Lines.Any())
     {
         <!-- TRƯỜNG HỢP BÀN CHƯA CÓ ĐƠN HOẶC ĐƠN RỖNG -->
-        <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white mx-auto my-4" style="max-width: 600px;">
+        <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white mx-auto my-4" style="max-width: 650px;">
             <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 90px; height: 90px;">
                 <i class="bi bi-receipt-cutoff fs-1 text-muted"></i>
             </div>
-            <h4 class="fw-bold text-dark mb-2">Bàn @(_table?.TableNumber ?? TableId.ToString()) hiện chưa có đơn gọi món</h4>
-            <p class="text-muted mb-4">Quý khách chưa gửi món ăn nào vào bếp để tạo hóa đơn thanh toán. Vui lòng vào trang gọi món để chọn các món ăn hấp dẫn.</p>
-            <div class="d-flex justify-content-center gap-3">
+            <h4 class="fw-bold text-dark mb-2">Bàn @(_table?.TableNumber ?? TableId.ToString()) hiện chưa có đơn gọi món cần thanh toán</h4>
+            <p class="text-muted mb-4">Quý khách có thể vào trang gọi món để chọn món ăn, hoặc bấm nút dưới đây để hệ thống nạp sẵn đơn mẫu demo trải nghiệm thanh toán VietQR ngay lập tức.</p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <button type="button" class="btn btn-warning rounded-pill px-4 py-2 shadow-sm fw-bold text-dark" @onclick="CreateDemoOrder">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Nạp Đơn Mẫu Để Demo Thanh Toán
+                </button>
                 <a href="goi-mon/@TableId" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm fw-semibold">
-                    <i class="bi bi-cart-plus me-1"></i> Gọi Món Ngay
-                </a>
-                <a href="menu" class="btn btn-outline-secondary rounded-pill px-4 py-2">
-                    Khám Phá Menu
+                    <i class="bi bi-cart-plus me-1"></i> Vào Bàn Tự Chọn Món
                 </a>
             </div>
         </div>
@@ -92,8 +116,8 @@
                             <div class="fw-bold text-primary">@_selectedPaymentMethod</div>
                         </div>
                         <div class="col-6 text-end">
-                            <span class="text-muted">Trạng thái:</span>
-                            <div><span class="badge bg-success">Đã hoàn tất & Đóng bàn</span></div>
+                            <span class="text-muted">Trạng thái bàn:</span>
+                            <div><span class="badge bg-success">Đã giải phóng & Đóng bàn</span></div>
                         </div>
                     </div>
                 </div>
@@ -487,9 +511,10 @@
 
 @code {
     [Parameter]
-    public int TableId { get; set; }
+    public int TableId { get; set; } = 1;
 
     private DiningTable? _table;
+    private List<DiningTable>? _allTables;
     private TableOrder? _activeOrder;
     private bool _isLoading = true;
     private bool _isProcessing = false;
@@ -519,6 +544,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (TableId <= 0) TableId = 1;
         await LoadData();
     }
 
@@ -529,6 +555,9 @@
 
         try
         {
+            var tables = await ViewTablesUseCase.ExecuteAsync();
+            _allTables = tables.ToList();
+
             _table = await ViewTablesUseCase.ExecuteAsync(TableId);
             _activeOrder = await ViewTableOrderUseCase.GetActiveOrderByTableIdAsync(TableId);
 
@@ -540,6 +569,35 @@
         catch (Exception ex)
         {
             _errorMessage = $"Không thể tải thông tin đơn bàn: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateDemoOrder()
+    {
+        try
+        {
+            _isLoading = true;
+            CartService.ClearCart(TableId);
+
+            var all = (await MenuItemRepo.GetAllMenuItemsAsync()).Where(i => i.IsAvailable).ToList();
+            var item1 = all.FirstOrDefault(i => i.Name.Contains("Bún Bò") || i.Name.Contains("Phở")) ?? all.FirstOrDefault();
+            var item2 = all.FirstOrDefault(i => i.Name.Contains("Bánh Xèo") || i.Name.Contains("Nem Lụi")) ?? all.Skip(1).FirstOrDefault();
+            var item3 = all.FirstOrDefault(i => i.Name.Contains("Trà") || i.Name.Contains("Cà Phê")) ?? all.LastOrDefault();
+
+            if (item1 != null) CartService.AddItem(TableId, item1, 2, "Nóng hổi");
+            if (item2 != null) CartService.AddItem(TableId, item2, 1, "Giòn rụm");
+            if (item3 != null) CartService.AddItem(TableId, item3, 2, "Ít ngọt");
+
+            await SubmitTableOrderUseCase.ExecuteAsync(TableId, "Khách nạp combo trải nghiệm thanh toán");
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Không thể nạp đơn mẫu: {ex.Message}";
         }
         finally
         {
