@@ -88,11 +88,21 @@
     [Parameter]
     public EventCallback<DiningTable> OnSelectTable { get; set; }
 
+    [Parameter]
+    public EventCallback<DiningTable> OnTableSelected { get; set; }
+
     private async Task HandleClick()
     {
-        if (!IsDisabled && OnSelectTable.HasDelegate)
+        if (!IsDisabled)
         {
-            await OnSelectTable.InvokeAsync(Table);
+            if (OnSelectTable.HasDelegate)
+            {
+                await OnSelectTable.InvokeAsync(Table);
+            }
+            if (OnTableSelected.HasDelegate)
+            {
+                await OnTableSelected.InvokeAsync(Table);
+            }
         }
     }
 
