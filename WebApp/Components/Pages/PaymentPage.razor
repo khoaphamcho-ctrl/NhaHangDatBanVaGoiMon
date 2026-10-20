@@ -372,38 +372,97 @@
                     <!-- CHI TIẾT TƯƠNG ỨNG VỚI PHƯƠNG THỨC ĐÃ CHỌN -->
                     @if (_selectedPaymentMethod == "Chuyển khoản QR (VietQR)")
                     {
-                        <div class="card border border-primary border-opacity-25 rounded-4 p-3 bg-white mb-3 text-center">
+                        <div class="card border border-primary border-opacity-25 rounded-4 p-3 bg-white mb-3 text-center shadow-sm">
                             <div class="fw-bold text-dark mb-2">Quét mã QR để chuyển khoản nhanh:</div>
-                            
-                            <!-- HÌNH ẢNH MÃ VIETQR CHUẨN TỰ ĐỘNG SINH -->
-                            <div class="position-relative d-inline-block mx-auto mb-2 p-2 bg-white rounded-3 shadow-sm border" style="max-width: 220px;">
-                                <img src="@GetVietQrImageUrl()" 
-                                     alt="VietQR Payment Code" 
-                                     class="img-fluid rounded-2" 
-                                     style="width: 200px; height: 200px; object-fit: contain;" />
-                            </div>
 
-                            <div class="bg-light p-2 rounded-3 text-start small mb-2 border">
-                                <div class="d-flex justify-content-between mb-1">
+                            <!-- TAB CHỌN LOẠI MÃ QR -->
+                            <div class="btn-group btn-group-sm mb-3 shadow-sm rounded-pill p-1 bg-light border" role="group">
+                                <button type="button" 
+                                        class="btn rounded-pill px-3 fw-semibold @(_qrDisplayMode == "StoreQr" ? "btn-primary shadow-sm" : "btn-light text-secondary")"
+                                        @onclick='() => _qrDisplayMode = "StoreQr"'>
+                                    <i class="bi bi-qr-code me-1"></i> Mã QR Cửa Hàng
+                                </button>
+                                <button type="button" 
+                                        class="btn rounded-pill px-3 fw-semibold @(_qrDisplayMode == "DynamicQr" ? "btn-primary shadow-sm" : "btn-light text-secondary")"
+                                        @onclick='() => _qrDisplayMode = "DynamicQr"'>
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> VietQR Tự Nhập Tiền
+                                </button>
+                            </div>
+                            
+                            @if (_qrDisplayMode == "StoreQr")
+                            {
+                                <!-- HÌNH ẢNH MÃ QR NHÀ HÀNG (MÃ DO QUÝ KHÁCH CUNG CẤP) -->
+                                <div class="position-relative d-inline-block mx-auto mb-2 p-2 bg-white rounded-3 shadow-sm border" style="max-width: 230px;">
+                                    <img src="images/qr-payment.jpg" 
+                                         alt="Mã QR Chuyển Khoản BIDV" 
+                                         class="img-fluid rounded-3" 
+                                         style="width: 210px; height: 210px; object-fit: contain;" />
+                                    <div class="mt-1 small fw-bold text-success">
+                                        <i class="bi bi-patch-check-fill me-1"></i>Mã QR Nhà Hàng
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- HÌNH ẢNH MÃ VIETQR CHUẨN TỰ ĐỘNG SINH KÈM SỐ TIỀN CHÍNH XÁC -->
+                                <div class="position-relative d-inline-block mx-auto mb-2 p-2 bg-white rounded-3 shadow-sm border" style="max-width: 230px;">
+                                    <img src="@GetVietQrImageUrl()" 
+                                         alt="VietQR Payment Code" 
+                                         class="img-fluid rounded-2" 
+                                         style="width: 210px; height: 210px; object-fit: contain;" />
+                                    <div class="mt-1 small fw-bold text-primary">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đã nạp sẵn @CalculateFinalTotal().ToString("N0") đ
+                                    </div>
+                                </div>
+                            }
+
+                            <!-- THÔNG TIN TÀI KHOẢN NGÂN HÀNG (BIDV) -->
+                            <div class="bg-light p-3 rounded-3 text-start small mb-2 border">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="text-muted">Ngân hàng:</span>
-                                    <span class="fw-bold text-dark">MB Bank (Quân Đội)</span>
+                                    <span class="fw-bold text-dark d-flex align-items-center gap-1">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">BIDV</span>
+                                        <span>Đầu tư & Phát triển Việt Nam</span>
+                                    </span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="text-muted">Số tài khoản:</span>
-                                    <span class="fw-bold text-danger">0905888999</span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="fw-bold text-danger fs-6">5561333825</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill" title="Sao chép STK" @onclick='() => CopyToClipboard("5561333825", "Đã sao chép số tài khoản: 5561333825")'>
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="text-muted">Chủ tài khoản:</span>
                                     <span class="fw-semibold text-dark">NHA HANG CO DO HUE</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
                                     <span class="text-muted">Số tiền:</span>
-                                    <span class="fw-bold text-danger fs-6">@CalculateFinalTotal().ToString("N0") đ</span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="fw-bold text-danger fs-6">@CalculateFinalTotal().ToString("N0") đ</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill" title="Sao chép số tiền" @onclick='() => CopyToClipboard(CalculateFinalTotal().ToString("F0"), "Đã sao chép số tiền!")'>
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="d-flex justify-content-between">
-                                    <span class="text-muted">Nội dung:</span>
-                                    <span class="fw-bold text-primary">@GetTransferContent()</span>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted">Nội dung CK:</span>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="fw-bold text-primary">@GetTransferContent()</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill" title="Sao chép nội dung" @onclick='() => CopyToClipboard(GetTransferContent(), "Đã sao chép nội dung chuyển khoản!")'>
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
                                 </div>
+
+                                @if (!string.IsNullOrEmpty(_copyMessage))
+                                {
+                                    <div class="text-success text-center fw-semibold mt-2 pt-2 border-top small">
+                                        <i class="bi bi-check-circle-fill me-1"></i>@_copyMessage
+                                    </div>
+                                }
                             </div>
                             <small class="text-muted fst-italic">Hệ thống sẽ tự động cập nhật và đóng bàn sau khi xác nhận.</small>
                         </div>
@@ -524,6 +583,8 @@
     // Quản lý phương thức thanh toán
     private string _selectedPaymentMethod = "Chuyển khoản QR (VietQR)";
     private decimal? _cashGiven;
+    private string _qrDisplayMode = "StoreQr";
+    private string? _copyMessage;
 
     // Quản lý Voucher & Giảm giá
     private string _voucherInput = string.Empty;
@@ -670,7 +731,27 @@
         decimal amount = CalculateFinalTotal();
         string addInfo = Uri.EscapeDataString(GetTransferContent());
         string accountName = Uri.EscapeDataString("NHA HANG CO DO HUE");
-        return $"https://api.vietqr.io/image/970422-0905888999-compact.png?amount={(long)amount}&addInfo={addInfo}&accountName={accountName}";
+        return $"https://api.vietqr.io/image/970418-5561333825-compact.png?amount={(long)amount}&addInfo={addInfo}&accountName={accountName}";
+    }
+
+    private async Task CopyToClipboard(string text, string successMessage)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            _copyMessage = successMessage;
+            StateHasChanged();
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(2500);
+                _copyMessage = null;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch
+        {
+            _copyMessage = $"Đã sao chép: {text}";
+        }
     }
 
     private async Task ProcessPayment()
