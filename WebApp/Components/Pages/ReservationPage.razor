@@ -772,6 +772,7 @@
     private void SelectOccasion(string occasion)
     {
         _selectedOccasion = occasion;
+        if (_formModel.Note == null) _formModel.Note = string.Empty;
         if (!_formModel.Note.Contains(occasion))
         {
             _formModel.Note = string.IsNullOrWhiteSpace(_formModel.Note) ? occasion : $"{occasion}, {_formModel.Note}";
@@ -780,6 +781,7 @@
 
     private void AppendNote(string extra)
     {
+        if (_formModel.Note == null) _formModel.Note = string.Empty;
         if (!_formModel.Note.Contains(extra))
         {
             _formModel.Note = string.IsNullOrWhiteSpace(_formModel.Note) ? extra : $"{_formModel.Note}, {extra}";
@@ -803,10 +805,10 @@
         if (_tables == null) return Enumerable.Empty<DiningTable>();
 
         if (_selectedLocationFilter == "All") return _tables;
-        if (_selectedLocationFilter == "Tầng 1") return _tables.Where(t => t.Location.Contains("Tầng 1"));
-        if (_selectedLocationFilter == "Tầng 2") return _tables.Where(t => t.Location.Contains("Tầng 2"));
-        if (_selectedLocationFilter == "Sân vườn") return _tables.Where(t => t.Location.Contains("Sân vườn"));
-        if (_selectedLocationFilter == "VIP") return _tables.Where(t => t.Location.Contains("VIP") || t.TableNumber.Contains("VIP"));
+        if (_selectedLocationFilter == "Tầng 1") return _tables.Where(t => t.Location != null && t.Location.Contains("Tầng 1"));
+        if (_selectedLocationFilter == "Tầng 2") return _tables.Where(t => t.Location != null && t.Location.Contains("Tầng 2"));
+        if (_selectedLocationFilter == "Sân vườn") return _tables.Where(t => t.Location != null && t.Location.Contains("Sân vườn"));
+        if (_selectedLocationFilter == "VIP") return _tables.Where(t => (t.Location != null && t.Location.Contains("VIP")) || (t.TableNumber != null && t.TableNumber.Contains("VIP")));
 
         return _tables;
     }
