@@ -1,191 +1,662 @@
 @page "/dat-ban"
 @using System.ComponentModel.DataAnnotations
+@using CoreBusiness.Models
+@using CoreBusiness.Enums
+@using CoreBusiness.Exceptions
+@using UseCases.Reservations
+@using UseCases.DataStorePluginInterfaces
 @inject IViewTablesUseCase ViewTablesUseCase
 @inject IPlaceReservationUseCase PlaceReservationUseCase
+@inject ICancelReservationUseCase CancelReservationUseCase
+@inject IReservationRepository ReservationRepo
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavManager
 
 <PageTitle>Đặt Bàn Trực Tuyến - Nhà Hàng Cố Đô Huế</PageTitle>
 
-<div class="container py-4">
-    <!-- TIÊU ĐỀ & MÔ TẢ -->
-    <div class="text-center mb-4">
-        <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-2 rounded-pill fw-bold text-uppercase">
-            <i class="bi bi-calendar2-heart-fill me-1"></i> Trải Nghiệm Ẩm Thực Cung Đình
-        </span>
-        <h2 class="fw-bold mt-2 mb-1">Đặt Bàn Trước Trực Tuyến</h2>
-        <p class="text-muted">Chọn không gian ưng ý, thời gian và số lượng khách. Hệ thống tự động kiểm tra chỗ trống và sức chứa.</p>
-    </div>
+<div class="container py-3 py-md-4">
+    <!-- TIÊU ĐỀ & CHUYỂN TAB ĐẶT BÀN / TRA CỨU -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 border-bottom pb-3">
+        <div>
+            <span class="badge bg-danger bg-opacity-10 text-danger px-3 py-1 rounded-pill fw-bold text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.5px;">
+                <i class="bi bi-calendar2-heart-fill me-1"></i> Trải Nghiệm Ẩm Thực Cung Đình
+            </span>
+            <h2 class="fw-bold mb-1 text-dark mt-1">Đặt Bàn Trực Tuyến</h2>
+            <small class="text-muted">
+                <i class="bi bi-geo-alt-fill text-danger me-1"></i>68 Lê Lợi, TP. Huế &bull; Hotline đặt bàn: <strong>0905.888.999</strong>
+            </small>
+        </div>
 
-    <!-- KHỐI BẢNG THÔNG BÁO DEMO VẤN ĐÁP LUẬT 1 (K1.3, K3.3) -->
-    <div class="card border-warning bg-warning bg-opacity-10 mb-4 shadow-sm" style="border-radius: 16px;">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                    <i class="bi bi-shield-check text-warning fs-5"></i>
-                    <span>Trọng Tâm Vấn Đáp: Tiêu Chí K1.3 & K3.3 (Luật 1: Ràng Buộc Đặt Bàn)</span>
-                </h6>
-                <span class="badge bg-dark">CoreBusiness / UseCases</span>
-            </div>
-            <p class="small text-muted mb-3">
-                Luật 1 quy định: <strong>(1) Số khách đặt &le; Sức chứa của bàn</strong> và <strong>(2) Một bàn không có 2 đặt chỗ trùng nhau trong khung 2 giờ</strong>.
-                Bấm các nút dưới đây để nạp nhanh kịch bản kiểm tra:
-            </p>
-            <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold" @onclick="LoadOverCapacityDemo">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Demo Vi Phạm: Vượt sức chứa bàn (6 khách vào bàn 2 chỗ)
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- NÚT CHUYỂN TAB -->
+            <div class="btn-group rounded-pill p-1 bg-light border shadow-sm">
+                <button type="button" 
+                        class="btn btn-sm rounded-pill px-3 fw-semibold @(_activeTab == "Booking" ? "btn-primary shadow-sm" : "btn-light text-secondary")"
+                        @onclick='() => SwitchTab("Booking")'>
+                    <i class="bi bi-calendar-plus me-1"></i> Đặt Bàn Ngay
                 </button>
-                <button type="button" class="btn btn-outline-warning btn-sm rounded-pill fw-semibold text-dark" @onclick="LoadOverlapTimeDemo">
-                    <i class="bi bi-clock-history me-1"></i> Demo Vi Phạm: Trùng lịch 2 giờ (Đặt 19:00 trùng ca 18:00)
-                </button>
-                <button type="button" class="btn btn-outline-success btn-sm rounded-pill fw-semibold" @onclick="LoadValidDemo">
-                    <i class="bi bi-check-circle-fill me-1"></i> Nạp Ca Đặt Bàn Hợp Lệ
+                <button type="button" 
+                        class="btn btn-sm rounded-pill px-3 fw-semibold @(_activeTab == "Lookup" ? "btn-primary shadow-sm" : "btn-light text-secondary")"
+                        @onclick='() => SwitchTab("Lookup")'>
+                    <i class="bi bi-search me-1"></i> Tra Cứu Lịch Đặt
                 </button>
             </div>
+
+            <!-- NÚT BẬT/TẮT BỘ TEST CHẤM ĐIỂM NGHIỆP VỤ (K1.3 / K3.3) -->
+            <button type="button" 
+                    class="btn btn-sm @(_showGradingDemo ? "btn-warning" : "btn-outline-warning text-dark") rounded-pill px-3 fw-semibold shadow-sm"
+                    @onclick="() => _showGradingDemo = !_showGradingDemo"
+                    title="Bật/Tắt chế độ nạp nhanh kịch bản kiểm tra tiêu chí K1.3, K3.3">
+                <i class="bi bi-shield-check me-1"></i> 
+                @(_showGradingDemo ? "Đóng Demo Luật 1" : "🧪 Demo Nghiệp Vụ")
+            </button>
         </div>
     </div>
 
-    <!-- HIỂN THỊ THÔNG BÁO LỖI / THÀNH CÔNG THÂN THIỆN (K3.3) -->
+    <!-- KHỐI DEMO VẤN ĐÁP TIÊU CHÍ K1.3 & K3.3 (Có thể đóng/mở tiện lợi) -->
+    @if (_showGradingDemo)
+    {
+        <div class="card border-warning bg-warning bg-opacity-10 mb-4 shadow-sm rounded-4 animate__animated animate__fadeIn">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-shield-lock-fill text-warning fs-5"></i>
+                        <span>Bộ Kiểm Thử Nghiệp Vụ: Tiêu Chí K1.3 & K3.3 (Luật 1: Ràng Buộc Đặt Bàn)</span>
+                    </h6>
+                    <span class="badge bg-dark">CoreBusiness / UseCases</span>
+                </div>
+                <p class="small text-muted mb-3">
+                    Luật 1 trong kiến trúc Clean Architecture: <strong>(1) Số khách đặt &le; Sức chứa của bàn</strong> và <strong>(2) Một bàn không có 2 đặt chỗ trùng nhau trong khoảng cách 2 giờ</strong>.
+                    Bấm các nút dưới đây để nạp tự động kịch bản và xem tầng Domain Rule bắt chặn lỗi:
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold bg-white" @onclick="LoadOverCapacityDemo">
+                        <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Demo Vi Phạm: Vượt sức chứa bàn (6 khách vào Bàn 01 - 2 chỗ)
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm rounded-pill fw-semibold text-dark bg-white" @onclick="LoadOverlapTimeDemo">
+                        <i class="bi bi-clock-history text-warning me-1"></i> Demo Vi Phạm: Trùng lịch 2 giờ (Đặt 19:00 trùng với ca 18:00)
+                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm rounded-pill fw-semibold bg-white" @onclick="LoadValidDemo">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i> Nạp Ca Đặt Bàn Hợp Lệ (Bàn 04, ngày mai)
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- HIỂN THỊ THÔNG BÁO LỖI NGHIỆP VỤ THÂN THIỆN (K3.3) -->
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4 d-flex align-items-start gap-3 p-3 mb-4" role="alert">
             <i class="bi bi-exclamation-octagon-fill fs-3 text-danger flex-shrink-0"></i>
             <div>
-                <h6 class="alert-heading fw-bold mb-1">Quy định nghiệp vụ bị vi phạm!</h6>
+                <h6 class="alert-heading fw-bold mb-1">Quy định đặt bàn bị vi phạm!</h6>
                 <div>@_errorMessage</div>
-                <small class="text-muted d-block mt-1">Được chặn an toàn bởi tầng Domain Rule trong CoreBusiness / UseCases (Tiêu chí K1.3, K3.3).</small>
+                <small class="text-muted d-block mt-1">Hệ thống kích hoạt ngoại lệ Domain Rule ngăn chặn đặt sai (Tiêu chí K1.3 & K3.3).</small>
             </div>
             <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
         </div>
     }
 
-    @if (!string.IsNullOrEmpty(_successMessage))
+    @if (_activeTab == "Booking")
     {
-        <div class="alert alert-success alert-dismissible fade show shadow-sm rounded-4 d-flex align-items-center gap-3 p-3 mb-4" role="alert">
-            <i class="bi bi-check-circle-fill fs-3 text-success flex-shrink-0"></i>
-            <div>
-                <h6 class="alert-heading fw-bold mb-1">Đặt bàn thành công!</h6>
-                <div>@_successMessage</div>
-            </div>
-            <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
-        </div>
-    }
+        @if (_isBookingSuccessful && _confirmedReservation != null)
+        {
+            <!-- ============================================================= -->
+            <!-- MÀN HÌNH XÁC NHẬN ĐẶT BÀN THÀNH CÔNG (LUXURY RESERVATION PASS) -->
+            <!-- ============================================================= -->
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden mx-auto bg-white my-3" style="max-width: 720px;">
+                <!-- HEADER VÉ HOÀNG GIA -->
+                <div class="p-4 p-md-5 text-center text-white" style="background: linear-gradient(135deg, #b02a37 0%, #74131d 100%);">
+                    <div class="rounded-circle bg-white text-danger d-inline-flex align-items-center justify-content-center mb-3 shadow" style="width: 80px; height: 80px;">
+                        <i class="bi bi-patch-check-fill fs-1"></i>
+                    </div>
+                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold text-uppercase mb-2 shadow-sm">
+                        <i class="bi bi-gem me-1"></i> Đặt Bàn Trực Tuyến Đã Xác Nhận
+                    </span>
+                    <h3 class="fw-bold mb-1">XÁC NHẬN GIỮ BÀN THÀNH CÔNG!</h3>
+                    <p class="text-white-50 mb-0">Cảm ơn Quý khách đã lựa chọn Nhà Hàng Cố Đô Huế. Bàn của Quý khách đã sẵn sàng.</p>
+                </div>
 
-    <div class="row g-4">
-        <!-- FORM ĐẶT BÀN (K3.2: EditForm + DataAnnotations) -->
-        <div class="col-lg-5">
-            <div class="card shadow-sm border-0 p-4 rounded-4 bg-white sticky-top" style="top: 80px;">
-                <h5 class="fw-bold mb-3 text-dark border-bottom pb-2">
-                    <i class="bi bi-person-lines-fill text-primary me-2"></i> Thông Tin Đặt Chỗ
-                </h5>
+                <!-- THẺ NỘI DUNG VÉ (E-PASS) -->
+                <div class="card-body p-4 p-md-5">
+                    <!-- MÃ PHIẾU VÀ MÃ QR CHECK-IN -->
+                    <div class="row align-items-center bg-light p-3 rounded-4 border mb-4">
+                        <div class="col-8">
+                            <span class="text-muted small text-uppercase fw-semibold">Mã Phiếu Đặt Chỗ (Booking Ref):</span>
+                            <div class="fs-4 fw-bold text-danger">#RSV-@DateTime.Now.ToString("yyyyMMdd")-@_confirmedReservation.ReservationId.ToString("D4")</div>
+                            <small class="text-muted">Quý khách vui lòng lưu lại mã này hoặc đưa cho lễ tân khi đến nhà hàng.</small>
+                        </div>
+                        <div class="col-4 text-center border-start">
+                            <img src="@($"https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=CODO-RSV-{_confirmedReservation.ReservationId}")" 
+                                 alt="QR Check-in" 
+                                 class="img-fluid rounded border bg-white p-1 shadow-sm" style="width: 80px; height: 80px;" />
+                            <div class="text-muted" style="font-size: 0.7rem;">Mã QR Check-in</div>
+                        </div>
+                    </div>
+
+                    <!-- THÔNG TIN CHI TIẾT ĐẶT BÀN -->
+                    <h6 class="fw-bold text-dark text-uppercase small mb-3 border-bottom pb-2">
+                        <i class="bi bi-info-circle-fill text-danger me-1"></i> Chi Tiết Bàn & Dịch Vụ
+                    </h6>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white h-100">
+                                <span class="text-muted small d-block">Bàn phục vụ:</span>
+                                <div class="fs-5 fw-bold text-primary">@(_selectedTable?.TableNumber ?? $"Bàn {_confirmedReservation.DiningTableId}")</div>
+                                <div class="small text-muted"><i class="bi bi-geo-alt-fill text-danger me-1"></i>@(_selectedTable?.Location ?? "Sảnh chính")</div>
+                                <div class="small text-muted"><i class="bi bi-people-fill me-1"></i>Sức chứa tối đa: @_selectedTable?.Capacity người</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white h-100">
+                                <span class="text-muted small d-block">Thời gian đến:</span>
+                                <div class="fs-5 fw-bold text-dark">@_confirmedReservation.ReservationTime.ToString("HH:mm")</div>
+                                <div class="small fw-semibold text-danger">@_confirmedReservation.ReservationTime.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</div>
+                                <div class="small text-muted"><i class="bi bi-person-fill text-primary me-1"></i>Số lượng khách: <strong>@_confirmedReservation.GuestCount người</strong></div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white h-100">
+                                <span class="text-muted small d-block">Khách hàng đặt bàn:</span>
+                                <div class="fw-bold text-dark">@_confirmedReservation.CustomerName</div>
+                                <div class="small text-muted"><i class="bi bi-telephone-fill text-success me-1"></i>@_confirmedReservation.PhoneNumber</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-3 bg-white h-100">
+                                <span class="text-muted small d-block">Mục đích & Ghi chú:</span>
+                                <div class="fw-semibold text-dark">@(!string.IsNullOrWhiteSpace(_confirmedReservation.Note) ? _confirmedReservation.Note : "Không có yêu cầu thêm")</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LƯU Ý QUY ĐỊNH GIỮ CHỖ CỦA NHÀ HÀNG -->
+                    <div class="alert alert-warning py-2 px-3 small rounded-3 mb-4 d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history fs-5 text-warning flex-shrink-0"></i>
+                        <div>
+                            <strong>Lưu ý quan trọng:</strong> Nhà hàng giữ bàn tối đa <strong>15 phút</strong> so với giờ hẹn. Nếu đến muộn hơn, xin vui lòng gọi hotline <strong>0905.888.999</strong> để được hỗ trợ.
+                        </div>
+                    </div>
+
+                    @if (_smsSimulated)
+                    {
+                        <div class="alert alert-success py-2 px-3 small rounded-3 mb-4 text-center">
+                            <i class="bi bi-chat-dots-fill me-1"></i> Đã gửi tin nhắn SMS / Zalo xác nhận đặt bàn tới số điện thoại: <strong>@_confirmedReservation.PhoneNumber</strong>
+                        </div>
+                    }
+
+                    <!-- CÁC NÚT THAO TÁC -->
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-4 py-2" @onclick="PrintReservation">
+                            <i class="bi bi-printer-fill me-1"></i> In Phiếu Đặt Bàn
+                        </button>
+                        <button type="button" class="btn btn-outline-primary rounded-pill px-4 py-2" @onclick="SimulateSms">
+                            <i class="bi bi-phone-vibrate me-1"></i> Gửi Tin Nhắn SMS / Zalo
+                        </button>
+                        <a href="menu" class="btn btn-primary rounded-pill px-4 py-2 shadow-sm">
+                            <i class="bi bi-book-half me-1"></i> Xem Thực Đơn & Chọn Món Trước
+                        </a>
+                        <button type="button" class="btn btn-gold rounded-pill px-4 py-2 shadow-sm" @onclick="ResetBookingForm">
+                            <i class="bi bi-plus-circle me-1"></i> Đặt Thêm Bàn Mới
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- ============================================================= -->
+            <!-- QUY TRÌNH ĐẶT BÀN THỰC TẾ THEO CÁC BƯỚC (BOOKING WIZARD)     -->
+            <!-- ============================================================= -->
+
+            <!-- THANH TIẾN TRÌNH 3 BƯỚC TRỰC QUAN -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4 overflow-hidden">
+                <div class="card-body p-3">
+                    <div class="row text-center g-2">
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2 p-2 rounded-3 @(_currentStep == 1 ? "bg-primary text-white shadow-sm" : (_currentStep > 1 ? "bg-primary bg-opacity-10 text-primary" : "text-muted"))">
+                                <span class="badge @(_currentStep == 1 ? "bg-white text-primary" : "bg-primary text-white") rounded-circle">1</span>
+                                <span class="fw-bold small d-none d-sm-inline">Thời Gian & Số Khách</span>
+                                <span class="fw-bold small d-inline d-sm-none">Giờ & Khách</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2 p-2 rounded-3 @(_currentStep == 2 ? "bg-primary text-white shadow-sm" : (_currentStep > 2 ? "bg-primary bg-opacity-10 text-primary" : "text-muted"))">
+                                <span class="badge @(_currentStep == 2 ? "bg-white text-primary" : (_currentStep > 2 ? "bg-primary text-white" : "bg-secondary text-white")) rounded-circle">2</span>
+                                <span class="fw-bold small d-none d-sm-inline">Chọn Bàn & Không Gian</span>
+                                <span class="fw-bold small d-inline d-sm-none">Chọn Bàn</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex align-items-center justify-content-center gap-2 p-2 rounded-3 @(_currentStep == 3 ? "bg-primary text-white shadow-sm" : "text-muted")">
+                                <span class="badge @(_currentStep == 3 ? "bg-white text-primary" : "bg-secondary text-white") rounded-circle">3</span>
+                                <span class="fw-bold small d-none d-sm-inline">Thông Tin Người Đặt</span>
+                                <span class="fw-bold small d-inline d-sm-none">Xác Nhận</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BƯỚC 1: CHỌN SỐ LƯỢNG KHÁCH & THỜI GIAN ĐẾN -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4 p-4">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                        <span class="badge bg-primary rounded-circle">1</span>
+                        <span>Chọn Số Lượng Khách & Khung Giờ Đến</span>
+                    </h5>
+                    <span class="badge bg-light text-muted border">Bước 1/3</span>
+                </div>
+
+                <div class="row g-4">
+                    <!-- CHỌN SỐ KHÁCH -->
+                    <div class="col-lg-6">
+                        <label class="form-label fw-bold text-dark small mb-2">
+                            <i class="bi bi-people-fill text-primary me-1"></i> Bạn đi cùng bao nhiêu người?
+                        </label>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            @foreach (var count in new[] { 1, 2, 4, 6, 8, 10, 12 })
+                            {
+                                <button type="button" 
+                                        class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_formModel.GuestCount == count ? "btn-primary shadow-sm" : "btn-outline-secondary")"
+                                        @onclick="() => SelectGuestCount(count)">
+                                    @(count == 1 ? "1 người" : $"{count} người")
+                                </button>
+                            }
+                        </div>
+                        <div class="input-group input-group-sm" style="max-width: 250px;">
+                            <span class="input-group-text bg-light text-muted">Hoặc nhập số khách:</span>
+                            <input type="number" min="1" max="50" class="form-control text-center fw-bold" 
+                                   @bind="_formModel.GuestCount" @bind:after="OnTimeOrGuestChanged" />
+                            <span class="input-group-text bg-light text-muted">người</span>
+                        </div>
+                        <small class="text-muted d-block mt-1">Hệ thống sẽ tự động lọc bàn có sức chứa phù hợp (&ge; @_formModel.GuestCount người).</small>
+                    </div>
+
+                    <!-- CHỌN NGÀY VÀ GIỜ -->
+                    <div class="col-lg-6 border-start-lg">
+                        <label class="form-label fw-bold text-dark small mb-2">
+                            <i class="bi bi-calendar-event text-danger me-1"></i> Ngày & Khung Giờ Dùng Bữa:
+                        </label>
+
+                        <!-- CHỌN NHANH NGÀY -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button type="button" 
+                                    class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_selectedDateType == "Today" ? "btn-danger shadow-sm" : "btn-outline-secondary")"
+                                    @onclick='() => SelectDatePreset("Today")'>
+                                Hôm nay (@DateTime.Today.ToString("dd/MM"))
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_selectedDateType == "Tomorrow" ? "btn-danger shadow-sm" : "btn-outline-secondary")"
+                                    @onclick='() => SelectDatePreset("Tomorrow")'>
+                                Ngày mai (@DateTime.Today.AddDays(1).ToString("dd/MM"))
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_selectedDateType == "DayAfter" ? "btn-danger shadow-sm" : "btn-outline-secondary")"
+                                    @onclick='() => SelectDatePreset("DayAfter")'>
+                                Ngày kia (@DateTime.Today.AddDays(2).ToString("dd/MM"))
+                            </button>
+                        </div>
+
+                        <!-- CHỌN KHUNG GIỜ -->
+                        <div class="mb-2">
+                            <span class="text-muted small fw-semibold d-block mb-1">
+                                <i class="bi bi-sun text-warning me-1"></i> Khung giờ Trưa (11:00 - 14:00):
+                            </span>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                @foreach (var time in _lunchTimes)
+                                {
+                                    <button type="button" 
+                                            class="btn btn-sm rounded-pill px-2 py-1 @(IsSelectedTime(time) ? "btn-warning text-dark fw-bold shadow-sm" : "btn-outline-secondary")"
+                                            @onclick="() => SelectTime(time)">
+                                        @time
+                                    </button>
+                                }
+                            </div>
+
+                            <span class="text-muted small fw-semibold d-block mb-1">
+                                <i class="bi bi-moon-stars text-primary me-1"></i> Khung giờ Tối (17:30 - 21:00):
+                            </span>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                @foreach (var time in _dinnerTimes)
+                                {
+                                    <button type="button" 
+                                            class="btn btn-sm rounded-pill px-2 py-1 @(IsSelectedTime(time) ? "btn-danger text-white fw-bold shadow-sm" : "btn-outline-secondary")"
+                                            @onclick="() => SelectTime(time)">
+                                        @time
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="p-2 bg-light rounded-3 border small d-flex justify-content-between align-items-center">
+                            <span>Thời gian đã chọn:</span>
+                            <strong class="text-danger">@_formModel.ReservationTime.ToString("HH:mm - dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"))</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BƯỚC 2: CHỌN BÀN & KHÔNG GIAN ĂN UỐNG -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4 p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center border-bottom pb-3 mb-3 gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                            <span class="badge bg-primary rounded-circle">2</span>
+                            <span>Chọn Bàn Ăn Thích Hợp</span>
+                        </h5>
+                        <small class="text-muted">Dựa trên @_formModel.GuestCount khách & thời gian @_formModel.ReservationTime.ToString("HH:mm dd/MM")</small>
+                    </div>
+
+                    <!-- BỘ LỌC KHU VỰC -->
+                    <div class="d-flex gap-1 flex-wrap">
+                        <button type="button" class="btn btn-sm rounded-pill px-3 @(_selectedLocationFilter == "All" ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick='() => _selectedLocationFilter = "All"'>
+                            Tất cả (@(_tables?.Count ?? 0))
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill px-3 @(_selectedLocationFilter == "Tầng 1" ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick='() => _selectedLocationFilter = "Tầng 1"'>
+                            Tầng 1 (Sảnh / Cửa sổ)
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill px-3 @(_selectedLocationFilter == "Tầng 2" ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick='() => _selectedLocationFilter = "Tầng 2"'>
+                            Tầng 2 (View sông Hương)
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill px-3 @(_selectedLocationFilter == "Sân vườn" ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick='() => _selectedLocationFilter = "Sân vườn"'>
+                            Sân vườn
+                        </button>
+                        <button type="button" class="btn btn-sm rounded-pill px-3 @(_selectedLocationFilter == "VIP" ? "btn-dark" : "btn-outline-secondary")"
+                                @onclick='() => _selectedLocationFilter = "VIP"'>
+                            Phòng VIP
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BẢNG TỔNG QUAN TÌNH TRẠNG BÀN -->
+                <div class="d-flex gap-3 flex-wrap mb-3 small align-items-center">
+                    <span class="d-flex align-items-center gap-1"><span class="badge bg-success rounded-circle p-1"> </span> Bàn trống (Khả dụng)</span>
+                    <span class="d-flex align-items-center gap-1"><span class="badge bg-primary rounded-circle p-1"> </span> Bàn bạn đang chọn</span>
+                    <span class="d-flex align-items-center gap-1"><span class="badge bg-warning rounded-circle p-1"> </span> Đã có khách đặt quanh giờ này</span>
+                    <span class="d-flex align-items-center gap-1"><span class="badge bg-secondary rounded-circle p-1"> </span> Sức chứa nhỏ hơn đoàn</span>
+                </div>
+
+                @if (_tables == null)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2">Đang đồng bộ danh sách bàn và lịch đặt...</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="row g-3">
+                        @foreach (var table in GetFilteredTables())
+                        {
+                            var eval = EvaluateTable(table);
+                            <div class="col-md-6 col-lg-4">
+                                <!-- SỬ DỤNG COMPONENT TÁI SỬ DỤNG TableCardComponent (TIÊU CHÍ K3.1) -->
+                                <TableCardComponent Table="table"
+                                                    IsSelected="@(_selectedTable?.TableId == table.TableId)"
+                                                    IsDisabled="@(!eval.IsSelectable)"
+                                                    DisabledReason="@eval.DisabledReason"
+                                                    CustomBadgeText="@eval.BadgeText"
+                                                    CustomBadgeClass="@eval.BadgeClass"
+                                                    OnSelectTable="HandleTableSelected" />
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- THẺ TỔNG KẾT BÀN ĐANG CHỌN -->
+                @if (_selectedTable != null)
+                {
+                    <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-4 mt-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                <i class="bi bi-check2-circle fs-3"></i>
+                            </div>
+                            <div>
+                                <span class="badge bg-primary text-white rounded-pill px-2">Đã chọn thành công</span>
+                                <h5 class="fw-bold text-dark mb-0 mt-1">@_selectedTable.TableNumber - @_selectedTable.Location</h5>
+                                <small class="text-muted">Sức chứa: @_selectedTable.Capacity người &bull; Phục vụ đoàn @_formModel.GuestCount khách</small>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" @onclick="GoToStep3">
+                            Tiếp Tục Nhập Thông Tin Khách <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                }
+            </div>
+
+            <!-- BƯỚC 3: FORM THÔNG TIN NGƯỜI ĐẶT & XÁC NHẬN (K3.2: EditForm + DataAnnotations) -->
+            <div class="card border-0 shadow-sm rounded-4 bg-white mb-4 p-4" id="step3-form">
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                        <span class="badge bg-primary rounded-circle">3</span>
+                        <span>Thông Tin Khách Hàng & Yêu Cầu Phục Vụ</span>
+                    </h5>
+                    <span class="badge bg-light text-muted border">Bước 3/3</span>
+                </div>
 
                 <EditForm Model="@_formModel" OnValidSubmit="HandleReservationSubmit">
                     <DataAnnotationsValidator />
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted">Bàn được chọn:</label>
-                        <div class="p-2 border rounded-3 bg-light d-flex justify-content-between align-items-center">
-                            @if (_selectedTable != null)
-                            {
-                                <div>
-                                    <strong class="text-primary">@_selectedTable.TableNumber</strong>
-                                    <span class="text-muted small"> (@_selectedTable.Location - Sức chứa: @_selectedTable.Capacity người)</span>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Họ và tên của Quý khách *</label>
+                            <InputText class="form-control py-2 rounded-3" @bind-Value="_formModel.CustomerName" placeholder="Ví dụ: Nguyễn Văn Hoàng" />
+                            <ValidationMessage For="@(() => _formModel.CustomerName)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-muted">Số điện thoại liên hệ *</label>
+                            <InputText class="form-control py-2 rounded-3" @bind-Value="_formModel.PhoneNumber" placeholder="Ví dụ: 0905123456" />
+                            <ValidationMessage For="@(() => _formModel.PhoneNumber)" class="text-danger small mt-1" />
+                        </div>
+
+                        <!-- DỊP ĐẶC BIỆT -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Dịp đặc biệt hôm nay (Tùy chọn):</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var occasion in new[] { "Bữa ăn thường ngày", "Kỷ niệm / Hẹn hò", "Tiệc sinh nhật", "Tiệc gia đình", "Gặp gỡ đối tác", "Họp mặt bạn bè" })
+                                {
+                                    <button type="button" 
+                                            class="btn btn-sm rounded-pill px-3 @(_selectedOccasion == occasion ? "btn-danger text-white shadow-sm" : "btn-outline-secondary")"
+                                            @onclick="() => SelectOccasion(occasion)">
+                                        @occasion
+                                    </button>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- GHI CHÚ PHỤC VỤ -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold small text-muted">Yêu cầu đặc biệt:</label>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="badge bg-light text-secondary border" style="cursor: pointer;" @onclick='() => AppendNote("Cần 01 ghế ăn dặm cho trẻ em")'>+ Ghế trẻ em</span>
+                                <span class="badge bg-light text-secondary border" style="cursor: pointer;" @onclick='() => AppendNote("Bàn sát cửa sổ ngắm cảnh")'>+ Sát cửa sổ</span>
+                                <span class="badge bg-light text-secondary border" style="cursor: pointer;" @onclick='() => AppendNote("Chuẩn bị nến & hoa trang trí")'>+ Nến & Hoa</span>
+                                <span class="badge bg-light text-secondary border" style="cursor: pointer;" @onclick='() => AppendNote("Khu vực yên tĩnh tiếp khách")'>+ Yên tĩnh</span>
+                            </div>
+                            <InputTextArea class="form-control rounded-3" rows="3" @bind-Value="_formModel.Note" 
+                                           placeholder="Nhập ghi chú thêm cho nhân viên phục vụ (món chay, dị ứng, thời gian chính xác...)" />
+                        </div>
+
+                        <!-- TỔNG KẾT TRƯỚC KHI BẤM NÚT -->
+                        <div class="col-12">
+                            <div class="p-3 bg-light rounded-4 border">
+                                <div class="row g-2 small">
+                                    <div class="col-6 col-md-3">
+                                        <span class="text-muted">Bàn đặt:</span>
+                                        <div class="fw-bold text-primary">@(_selectedTable?.TableNumber ?? "Chưa chọn bàn")</div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <span class="text-muted">Thời gian:</span>
+                                        <div class="fw-bold text-dark">@_formModel.ReservationTime.ToString("HH:mm dd/MM/yyyy")</div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <span class="text-muted">Số lượng khách:</span>
+                                        <div class="fw-bold text-dark">@_formModel.GuestCount khách</div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <span class="text-muted">Trạng thái:</span>
+                                        <div><span class="badge bg-success">Miễn phí đặt bàn</span></div>
+                                    </div>
                                 </div>
-                                <span class="badge bg-success">Đã chọn</span>
-                            }
-                            else
-                            {
-                                <span class="text-danger small fst-italic">Vui lòng chọn 1 bàn từ sơ đồ bên phải</span>
-                            }
+                            </div>
+                        </div>
+
+                        <!-- NÚT GỬI XÁC NHẬN ĐẶT BÀN -->
+                        <div class="col-12 mt-3">
+                            <button type="submit" 
+                                    class="btn btn-danger w-100 py-3 rounded-pill fw-bold fs-5 shadow d-flex align-items-center justify-content-center gap-2"
+                                    disabled="@(_isSubmitting || _selectedTable == null)">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    <span>Đang kiểm tra nghiệp vụ & ghi nhận đặt chỗ...</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-calendar2-check-fill fs-4"></i>
+                                    <span>Xác Nhận Đặt Bàn Ngay (Hoàn Tất)</span>
+                                }
+                            </button>
+                            <small class="text-muted text-center d-block mt-2">
+                                <i class="bi bi-shield-check me-1"></i> Thông tin của Quý khách được bảo mật tuyệt đối. Cam kết giữ bàn theo tiêu chuẩn phục vụ.
+                            </small>
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted">Họ và tên khách hàng *</label>
-                        <InputText class="form-control" @bind-Value="_formModel.CustomerName" placeholder="Nguyễn Văn A" />
-                        <ValidationMessage For="@(() => _formModel.CustomerName)" class="text-danger small mt-1" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted">Số điện thoại liên hệ *</label>
-                        <InputText class="form-control" @bind-Value="_formModel.PhoneNumber" placeholder="0905xxxxxx" />
-                        <ValidationMessage For="@(() => _formModel.PhoneNumber)" class="text-danger small mt-1" />
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-7">
-                            <label class="form-label fw-semibold small text-muted">Thời gian đến *</label>
-                            <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="_formModel.ReservationTime" />
-                            <ValidationMessage For="@(() => _formModel.ReservationTime)" class="text-danger small mt-1" />
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label fw-semibold small text-muted">Số lượng khách *</label>
-                            <InputNumber class="form-control" @bind-Value="_formModel.GuestCount" min="1" max="50" />
-                            <ValidationMessage For="@(() => _formModel.GuestCount)" class="text-danger small mt-1" />
-                        </div>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold small text-muted">Ghi chú đặc biệt (Tùy chọn)</label>
-                        <InputTextArea class="form-control" @bind-Value="_formModel.Note" rows="2" placeholder="Ví dụ: Kỷ niệm sinh nhật, ghế em bé, bàn view đẹp..." />
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2"
-                            disabled="@(_isSubmitting || _selectedTable == null)">
-                        @if (_isSubmitting)
-                        {
-                            <span class="spinner-border spinner-border-sm" role="status"></span>
-                            <span>Đang kiểm tra nghiệp vụ & ghi nhận...</span>
-                        }
-                        else
-                        {
-                            <i class="bi bi-calendar-check-fill"></i>
-                            <span>Xác Nhận Đặt Bàn Ngay</span>
-                        }
-                    </button>
                 </EditForm>
             </div>
-        </div>
+        }
+    }
+    else
+    {
+        <!-- ============================================================= -->
+        <!-- TAB TRA CỨU & QUẢN LÝ LỊCH ĐẶT BÀN THEO SỐ ĐIỆN THOẠI        -->
+        <!-- ============================================================= -->
+        <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mx-auto" style="max-width: 800px;">
+            <div class="text-center mb-4">
+                <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center mb-2" style="width: 60px; height: 60px;">
+                    <i class="bi bi-search fs-2"></i>
+                </div>
+                <h4 class="fw-bold text-dark mb-1">Tra Cứu Lịch Đặt Bàn Của Bạn</h4>
+                <p class="text-muted small">Nhập số điện thoại đã dùng để đặt bàn để kiểm tra trạng thái và lịch hẹn</p>
 
-        <!-- SƠ ĐỒ BÀN (K3.1: TableCardComponent) -->
-        <div class="col-lg-7">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold text-dark mb-0">
-                    <i class="bi bi-grid-3x3-gap-fill text-primary me-2"></i> Sơ Đồ Bàn Trực Quan (Floor Plan)
-                </h5>
-                <span class="text-muted small">Bấm vào bàn để chọn</span>
+                <div class="input-group input-group-lg shadow-sm rounded-pill overflow-hidden mx-auto mt-3" style="max-width: 450px;">
+                    <input type="text" class="form-control px-4 border-0" 
+                           placeholder="Nhập SĐT: 0905123456..." 
+                           @bind="_searchPhone" 
+                           @bind:event="oninput" 
+                           @onkeyup="HandleSearchKeyUp" />
+                    <button class="btn btn-primary px-4 fw-bold" type="button" @onclick="SearchReservations">
+                        Tra Cứu
+                    </button>
+                </div>
             </div>
 
-            @if (_tables == null)
+            @if (_hasSearched)
             {
-                <div class="text-center py-5">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="text-muted mt-2">Đang tải danh sách bàn...</p>
-                </div>
-            }
-            else
-            {
-                <div class="row g-3">
-                    @foreach (var table in _tables)
-                    {
-                        <div class="col-md-6">
-                            <!-- SỬ DỤNG COMPONENT TÁI SỬ DỤNG 1 (K3.1) -->
-                            <TableCardComponent Table="table" 
-                                                IsSelected="@(_selectedTable?.TableId == table.TableId)"
-                                                OnTableSelected="HandleTableSelected" />
-                        </div>
-                    }
-                </div>
+                @if (_searchResults != null && _searchResults.Any())
+                {
+                    <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                        Tìm thấy @_searchResults.Count lịch đặt bàn với số điện thoại '@_searchPhone':
+                    </h6>
+
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var res in _searchResults)
+                        {
+                            <div class="card border rounded-4 p-3 shadow-sm bg-light">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+                                    <div>
+                                        <span class="badge bg-danger rounded-pill px-2">#RSV-@res.ReservationId</span>
+                                        <h5 class="fw-bold text-dark mb-0 mt-1">@res.TableNumber (@res.GuestCount khách)</h5>
+                                        <small class="text-muted">Người đặt: <strong>@res.CustomerName</strong> &bull; SĐT: @res.PhoneNumber</small>
+                                    </div>
+                                    <div>
+                                        <span class="badge @GetStatusBadge(res.Status) fs-6">
+                                            @GetStatusText(res.Status)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="bg-white p-2 rounded-3 border small mb-2">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <span class="text-muted">Thời gian đến:</span>
+                                            <div class="fw-bold text-danger">@res.ReservationTime.ToString("HH:mm - dd/MM/yyyy")</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="text-muted">Ghi chú:</span>
+                                            <div class="fw-semibold text-dark">@(!string.IsNullOrEmpty(res.Note) ? res.Note : "Không")</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @if (res.Status == ReservationStatus.Confirmed)
+                                {
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <button class="btn btn-sm btn-outline-danger rounded-pill px-3" 
+                                                @onclick="() => CancelReservation(res.ReservationId)">
+                                            <i class="bi bi-x-circle me-1"></i> Hủy Đặt Bàn
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-calendar-x fs-1 text-muted d-block mb-2"></i>
+                        <h6 class="fw-bold text-dark">Không tìm thấy lịch đặt bàn nào!</h6>
+                        <p class="text-muted small">Số điện thoại '@_searchPhone' chưa có lịch đặt bàn hoặc đã hoàn tất. Bạn có thể đặt bàn mới ngay bây giờ.</p>
+                        <button class="btn btn-primary rounded-pill px-4" @onclick='() => SwitchTab("Booking")'>
+                            Đặt Bàn Mới Ngay
+                        </button>
+                    </div>
+                }
             }
         </div>
-    </div>
+    }
 </div>
 
 @code {
+    private string _activeTab = "Booking"; // "Booking" hoặc "Lookup"
+    private int _currentStep = 1;
+    private bool _showGradingDemo = false;
+
     private List<DiningTable>? _tables;
+    private List<Reservation>? _allReservations;
     private DiningTable? _selectedTable;
+
     private ReservationFormModel _formModel = new();
     private string? _errorMessage;
-    private string? _successMessage;
     private bool _isSubmitting = false;
+
+    // Dữ liệu đặt bàn hoàn tất
+    private bool _isBookingSuccessful = false;
+    private Reservation? _confirmedReservation;
+    private bool _smsSimulated = false;
+
+    // Bộ lọc & Lựa chọn nhanh
+    private string _selectedDateType = "Today";
+    private string _selectedLocationFilter = "All";
+    private string _selectedOccasion = "Bữa ăn thường ngày";
+
+    // Khung giờ ăn mẫu
+    private readonly string[] _lunchTimes = new[] { "11:00", "11:30", "12:00", "12:30", "13:00", "13:30" };
+    private readonly string[] _dinnerTimes = new[] { "17:30", "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00" };
+
+    // Tra cứu lịch đặt bàn
+    private string _searchPhone = string.Empty;
+    private bool _hasSearched = false;
+    private List<Reservation>? _searchResults;
 
     public class ReservationFormModel
     {
@@ -198,27 +669,120 @@
         public string PhoneNumber { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Vui lòng chọn thời gian đến.")]
-        public DateTime ReservationTime { get; set; } = DateTime.Today.AddHours(18);
+        public DateTime ReservationTime { get; set; } = DateTime.Today.AddHours(18).AddMinutes(30);
 
         [Required(ErrorMessage = "Vui lòng nhập số lượng khách.")]
         [Range(1, 50, ErrorMessage = "Số lượng khách từ 1 đến 50 người.")]
-        public int GuestCount { get; set; } = 2;
+        public int GuestCount { get; set; } = 4;
 
         public string Note { get; set; } = string.Empty;
     }
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadTables();
+        // Khởi tạo giờ mặc định hợp lệ ở tương lai
+        if (DateTime.Now.Hour >= 20)
+        {
+            _formModel.ReservationTime = DateTime.Today.AddDays(1).AddHours(18).AddMinutes(30);
+            _selectedDateType = "Tomorrow";
+        }
+        else if (DateTime.Now.Hour >= 13)
+        {
+            _formModel.ReservationTime = DateTime.Today.AddHours(18).AddMinutes(30);
+            _selectedDateType = "Today";
+        }
+        else
+        {
+            _formModel.ReservationTime = DateTime.Today.AddHours(12);
+            _selectedDateType = "Today";
+        }
+
+        await LoadData();
     }
 
-    private async Task LoadTables()
+    private async Task LoadData()
     {
-        var result = await ViewTablesUseCase.ExecuteAsync();
-        _tables = result.ToList();
-        if (_tables.Any() && _selectedTable == null)
+        var tables = await ViewTablesUseCase.ExecuteAsync();
+        _tables = tables.ToList();
+
+        var reservations = await ReservationRepo.GetAllReservationsAsync();
+        _allReservations = reservations.ToList();
+
+        // Tự động chọn bàn phù hợp đầu tiên nếu chưa chọn
+        if (_selectedTable == null && _tables.Any())
         {
-            _selectedTable = _tables.First();
+            _selectedTable = _tables.FirstOrDefault(t => t.Capacity >= _formModel.GuestCount) ?? _tables.First();
+        }
+    }
+
+    private void SwitchTab(string tab)
+    {
+        _activeTab = tab;
+        _errorMessage = null;
+    }
+
+    private void SelectGuestCount(int count)
+    {
+        _formModel.GuestCount = count;
+        OnTimeOrGuestChanged();
+    }
+
+    private void SelectDatePreset(string preset)
+    {
+        _selectedDateType = preset;
+        DateTime targetDate = preset switch
+        {
+            "Tomorrow" => DateTime.Today.AddDays(1),
+            "DayAfter" => DateTime.Today.AddDays(2),
+            _ => DateTime.Today
+        };
+
+        _formModel.ReservationTime = targetDate.Date.AddHours(_formModel.ReservationTime.Hour).AddMinutes(_formModel.ReservationTime.Minute);
+        OnTimeOrGuestChanged();
+    }
+
+    private void SelectTime(string timeStr)
+    {
+        if (TimeSpan.TryParse(timeStr, out var ts))
+        {
+            _formModel.ReservationTime = _formModel.ReservationTime.Date.Add(ts);
+            OnTimeOrGuestChanged();
+        }
+    }
+
+    private bool IsSelectedTime(string timeStr)
+    {
+        return _formModel.ReservationTime.ToString("HH:mm") == timeStr;
+    }
+
+    private void OnTimeOrGuestChanged()
+    {
+        _errorMessage = null;
+        // Nếu bàn đang chọn không còn đủ sức chứa, tự động tìm bàn khác tốt hơn
+        if (_selectedTable != null && _selectedTable.Capacity < _formModel.GuestCount)
+        {
+            var betterTable = _tables?.FirstOrDefault(t => t.Capacity >= _formModel.GuestCount);
+            if (betterTable != null)
+            {
+                _selectedTable = betterTable;
+            }
+        }
+    }
+
+    private void SelectOccasion(string occasion)
+    {
+        _selectedOccasion = occasion;
+        if (!_formModel.Note.Contains(occasion))
+        {
+            _formModel.Note = string.IsNullOrWhiteSpace(_formModel.Note) ? occasion : $"{occasion}, {_formModel.Note}";
+        }
+    }
+
+    private void AppendNote(string extra)
+    {
+        if (!_formModel.Note.Contains(extra))
+        {
+            _formModel.Note = string.IsNullOrWhiteSpace(_formModel.Note) ? extra : $"{_formModel.Note}, {extra}";
         }
     }
 
@@ -226,60 +790,63 @@
     {
         _selectedTable = table;
         _errorMessage = null;
+        _currentStep = 2;
     }
 
-    // Nạp kịch bản vi phạm sức chứa (Luật 1.1)
-    private void LoadOverCapacityDemo()
+    private void GoToStep3()
     {
-        _errorMessage = null;
-        _successMessage = null;
-        // Chọn Bàn 01 (Sức chứa 2 người)
-        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 1) ?? _tables?.FirstOrDefault();
-        _formModel.CustomerName = "Đoàn Khách Thử Nghiệm";
-        _formModel.PhoneNumber = "0905999888";
-        _formModel.GuestCount = 6; // 6 người > 2 ghế => Vi phạm Luật 1.1!
-        _formModel.ReservationTime = DateTime.Today.AddHours(20);
-        _formModel.Note = "Thử nghiệm ca vi phạm vượt quá sức chứa";
+        _currentStep = 3;
     }
 
-    // Nạp kịch bản vi phạm trùng khung 2 giờ (Luật 1.2)
-    private void LoadOverlapTimeDemo()
+    private IEnumerable<DiningTable> GetFilteredTables()
     {
-        _errorMessage = null;
-        _successMessage = null;
-        // Bàn 01 đã có khách lúc 18:00
-        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 1) ?? _tables?.FirstOrDefault();
-        _formModel.CustomerName = "Khách Hàng Đặt Trùng Lịch";
-        _formModel.PhoneNumber = "0912345678";
-        _formModel.GuestCount = 2; // Số khách hợp lệ (2 <= 2)
-        _formModel.ReservationTime = DateTime.Today.AddHours(19); // 19:00 cách 18:00 chỉ 1 giờ => Vi phạm khoảng cách 2 giờ!
-        _formModel.Note = "Thử nghiệm ca vi phạm trùng khung 2 giờ";
+        if (_tables == null) return Enumerable.Empty<DiningTable>();
+
+        if (_selectedLocationFilter == "All") return _tables;
+        if (_selectedLocationFilter == "Tầng 1") return _tables.Where(t => t.Location.Contains("Tầng 1"));
+        if (_selectedLocationFilter == "Tầng 2") return _tables.Where(t => t.Location.Contains("Tầng 2"));
+        if (_selectedLocationFilter == "Sân vườn") return _tables.Where(t => t.Location.Contains("Sân vườn"));
+        if (_selectedLocationFilter == "VIP") return _tables.Where(t => t.Location.Contains("VIP") || t.TableNumber.Contains("VIP"));
+
+        return _tables;
     }
 
-    // Nạp kịch bản hợp lệ
-    private void LoadValidDemo()
+    // Đánh giá tình trạng khả dụng của bàn
+    private (bool IsSelectable, string? DisabledReason, string? BadgeText, string? BadgeClass) EvaluateTable(DiningTable table)
     {
-        _errorMessage = null;
-        _successMessage = null;
-        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 4); // Bàn 04 (6 chỗ)
-        _formModel.CustomerName = "Gia đình anh Tuấn";
-        _formModel.PhoneNumber = "0987654321";
-        _formModel.GuestCount = 4; // 4 <= 6
-        _formModel.ReservationTime = DateTime.Today.AddDays(1).AddHours(18).AddMinutes(30); // 18:30 ngày mai
-        _formModel.Note = "Ăn tối gia đình";
+        // 1. Kiểm tra sức chứa
+        if (table.Capacity < _formModel.GuestCount)
+        {
+            return (false, $"Sức chứa {table.Capacity} người (đoàn cần {_formModel.GuestCount} chỗ)", "Không đủ chỗ", "bg-secondary text-white");
+        }
+
+        // 2. Kiểm tra trùng lịch trong 2 giờ
+        if (_allReservations != null)
+        {
+            var conflictingRes = _allReservations
+                .Where(r => r.DiningTableId == table.TableId && r.Status != ReservationStatus.Cancelled)
+                .FirstOrDefault(r => Math.Abs((r.ReservationTime - _formModel.ReservationTime).TotalHours) < 2.0);
+
+            if (conflictingRes != null)
+            {
+                return (false, $"Đã có khách đặt lúc {conflictingRes.ReservationTime:HH:mm}", "Kín lịch 2h", "bg-warning text-dark");
+            }
+        }
+
+        // 3. Khả dụng hoàn toàn
+        return (true, null, "Sẵn sàng đón tiếp", "bg-success text-white");
     }
 
     private async Task HandleReservationSubmit()
     {
         if (_selectedTable == null)
         {
-            _errorMessage = "Vui lòng chọn 1 bàn ăn trên sơ đồ.";
+            _errorMessage = "Vui lòng chọn 1 bàn ăn trên sơ đồ bàn (Bước 2).";
             return;
         }
 
         _isSubmitting = true;
         _errorMessage = null;
-        _successMessage = null;
 
         try
         {
@@ -293,17 +860,19 @@
                 Note = _formModel.Note
             };
 
-            // THỰC THI USECASE ĐẶT BÀN (CÀI ĐẶT LUẬT 1: K1.3)
+            // THỰC THI USECASE ĐẶT BÀN (CÀI ĐẶT LUẬT 1: TIÊU CHÍ K1.3)
             int reservationId = await PlaceReservationUseCase.ExecuteAsync(reservation);
+            reservation.ReservationId = reservationId;
 
-            _successMessage = $"Chúc mừng {_formModel.CustomerName}! Bàn '{_selectedTable.TableNumber}' đã được đặt thành công vào lúc {_formModel.ReservationTime:HH:mm dd/MM/yyyy} (Mã đặt bàn: #{reservationId}).";
-            
-            // Tải lại danh sách bàn để cập nhật trạng thái mới
-            await LoadTables();
+            _confirmedReservation = reservation;
+            _isBookingSuccessful = true;
+
+            // Tải lại dữ liệu bàn & đặt chỗ
+            await LoadData();
         }
         catch (DomainException dex)
         {
-            // BẪY LỖI NGHIỆP VỤ THÂN THIỆN (K3.3)
+            // BẪY LỖI NGHIỆP VỤ THÂN THIỆN (TIÊU CHÍ K3.3)
             _errorMessage = dex.Message;
         }
         catch (Exception ex)
@@ -315,4 +884,116 @@
             _isSubmitting = false;
         }
     }
+
+    private void ResetBookingForm()
+    {
+        _isBookingSuccessful = false;
+        _confirmedReservation = null;
+        _smsSimulated = false;
+        _currentStep = 1;
+        _formModel = new ReservationFormModel();
+    }
+
+    private async Task PrintReservation()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private void SimulateSms()
+    {
+        _smsSimulated = true;
+    }
+
+    // Tra cứu lịch đặt bàn
+    private async Task SearchReservations()
+    {
+        if (string.IsNullOrWhiteSpace(_searchPhone)) return;
+
+        var all = await ReservationRepo.GetAllReservationsAsync();
+        _searchResults = all.Where(r => r.PhoneNumber.Contains(_searchPhone.Trim())).OrderByDescending(r => r.ReservationTime).ToList();
+        _hasSearched = true;
+    }
+
+    private async Task HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchReservations();
+        }
+    }
+
+    private async Task CancelReservation(int reservationId)
+    {
+        try
+        {
+            await CancelReservationUseCase.ExecuteAsync(reservationId);
+            await SearchReservations();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Không thể hủy đặt bàn: {ex.Message}";
+        }
+    }
+
+    // CÁC KỊCH BẢN THỬ NGHIỆM TIÊU CHÍ K1.3, K3.3
+    private void LoadOverCapacityDemo()
+    {
+        _errorMessage = null;
+        _isBookingSuccessful = false;
+        _activeTab = "Booking";
+        // Chọn Bàn 01 (Sức chứa 2 người)
+        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 1) ?? _tables?.FirstOrDefault();
+        _formModel.CustomerName = "Đoàn Khách Thử Nghiệm";
+        _formModel.PhoneNumber = "0905999888";
+        _formModel.GuestCount = 6; // 6 người > 2 ghế => Vi phạm Luật 1.1!
+        _formModel.ReservationTime = DateTime.Today.AddDays(1).AddHours(20);
+        _formModel.Note = "Thử nghiệm ca vi phạm vượt quá sức chứa";
+        _currentStep = 3;
+    }
+
+    private void LoadOverlapTimeDemo()
+    {
+        _errorMessage = null;
+        _isBookingSuccessful = false;
+        _activeTab = "Booking";
+        // Bàn 01 đã có khách lúc 18:00 hôm nay
+        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 1) ?? _tables?.FirstOrDefault();
+        _formModel.CustomerName = "Khách Hàng Đặt Trùng Lịch";
+        _formModel.PhoneNumber = "0912345678";
+        _formModel.GuestCount = 2; // Số khách hợp lệ (2 <= 2)
+        _formModel.ReservationTime = DateTime.Today.AddHours(19); // 19:00 cách 18:00 chỉ 1 giờ => Vi phạm khoảng cách 2 giờ!
+        _formModel.Note = "Thử nghiệm ca vi phạm trùng khung 2 giờ";
+        _currentStep = 3;
+    }
+
+    private void LoadValidDemo()
+    {
+        _errorMessage = null;
+        _isBookingSuccessful = false;
+        _activeTab = "Booking";
+        _selectedTable = _tables?.FirstOrDefault(t => t.TableId == 4); // Bàn 04 (6 chỗ)
+        _formModel.CustomerName = "Gia đình anh Tuấn";
+        _formModel.PhoneNumber = "0987654321";
+        _formModel.GuestCount = 4; // 4 <= 6
+        _formModel.ReservationTime = DateTime.Today.AddDays(1).AddHours(18).AddMinutes(30); // 18:30 ngày mai
+        _formModel.Note = "Ăn tối gia đình, chuẩn bị bàn view đẹp";
+        _currentStep = 3;
+    }
+
+    private string GetStatusBadge(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Confirmed => "bg-success text-white",
+        ReservationStatus.Cancelled => "bg-danger text-white",
+        ReservationStatus.Completed => "bg-secondary text-white",
+        _ => "bg-info text-white"
+    };
+
+    private string GetStatusText(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Confirmed => "Đã xác nhận",
+        ReservationStatus.Cancelled => "Đã hủy",
+        ReservationStatus.Completed => "Đã phục vụ",
+        _ => "Chờ xác nhận"
+    };
 }
