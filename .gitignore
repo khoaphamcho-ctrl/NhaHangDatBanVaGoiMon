@@ -25,3 +25,5 @@ videopart*/
 *.exe
 !SQL2019-SSEI-Dev.exe
 NhaHang/
+Backup/
+UpgradeLog*
