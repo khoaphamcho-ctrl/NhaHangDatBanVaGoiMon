@@ -41,58 +41,17 @@
                     <i class="bi bi-search me-1"></i> Tra Cứu Lịch Đặt
                 </button>
             </div>
-
-            <!-- NÚT BẬT/TẮT BỘ TEST CHẤM ĐIỂM NGHIỆP VỤ (K1.3 / K3.3) -->
-            <button type="button" 
-                    class="btn btn-sm @(_showGradingDemo ? "btn-warning" : "btn-outline-warning text-dark") rounded-pill px-3 fw-semibold shadow-sm"
-                    @onclick="() => _showGradingDemo = !_showGradingDemo"
-                    title="Bật/Tắt chế độ nạp nhanh kịch bản kiểm tra tiêu chí K1.3, K3.3">
-                <i class="bi bi-shield-check me-1"></i> 
-                @(_showGradingDemo ? "Đóng Demo Luật 1" : "🧪 Demo Nghiệp Vụ")
-            </button>
         </div>
     </div>
 
-    <!-- KHỐI DEMO VẤN ĐÁP TIÊU CHÍ K1.3 & K3.3 (Có thể đóng/mở tiện lợi) -->
-    @if (_showGradingDemo)
-    {
-        <div class="card border-warning bg-warning bg-opacity-10 mb-4 shadow-sm rounded-4 animate__animated animate__fadeIn">
-            <div class="card-body p-3 p-md-4">
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                        <i class="bi bi-shield-lock-fill text-warning fs-5"></i>
-                        <span>Bộ Kiểm Thử Nghiệp Vụ: Tiêu Chí K1.3 & K3.3 (Luật 1: Ràng Buộc Đặt Bàn)</span>
-                    </h6>
-                    <span class="badge bg-dark">CoreBusiness / UseCases</span>
-                </div>
-                <p class="small text-muted mb-3">
-                    Luật 1 trong kiến trúc Clean Architecture: <strong>(1) Số khách đặt &le; Sức chứa của bàn</strong> và <strong>(2) Một bàn không có 2 đặt chỗ trùng nhau trong khoảng cách 2 giờ</strong>.
-                    Bấm các nút dưới đây để nạp tự động kịch bản và xem tầng Domain Rule bắt chặn lỗi:
-                </p>
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold bg-white" @onclick="LoadOverCapacityDemo">
-                        <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Demo Vi Phạm: Vượt sức chứa bàn (6 khách vào Bàn 01 - 2 chỗ)
-                    </button>
-                    <button type="button" class="btn btn-outline-warning btn-sm rounded-pill fw-semibold text-dark bg-white" @onclick="LoadOverlapTimeDemo">
-                        <i class="bi bi-clock-history text-warning me-1"></i> Demo Vi Phạm: Trùng lịch 2 giờ (Đặt 19:00 trùng với ca 18:00)
-                    </button>
-                    <button type="button" class="btn btn-outline-success btn-sm rounded-pill fw-semibold bg-white" @onclick="LoadValidDemo">
-                        <i class="bi bi-check-circle-fill text-success me-1"></i> Nạp Ca Đặt Bàn Hợp Lệ (Bàn 04, ngày mai)
-                    </button>
-                </div>
-            </div>
-        </div>
-    }
-
-    <!-- HIỂN THỊ THÔNG BÁO LỖI NGHIỆP VỤ THÂN THIỆN (K3.3) -->
+    <!-- HIỂN THỊ THÔNG BÁO LỖI THÂN THIỆN -->
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show shadow-sm rounded-4 d-flex align-items-start gap-3 p-3 mb-4" role="alert">
             <i class="bi bi-exclamation-octagon-fill fs-3 text-danger flex-shrink-0"></i>
             <div>
-                <h6 class="alert-heading fw-bold mb-1">Quy định đặt bàn bị vi phạm!</h6>
+                <h6 class="alert-heading fw-bold mb-1">Không thể hoàn tất đặt bàn</h6>
                 <div>@_errorMessage</div>
-                <small class="text-muted d-block mt-1">Hệ thống kích hoạt ngoại lệ Domain Rule ngăn chặn đặt sai (Tiêu chí K1.3 & K3.3).</small>
             </div>
             <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
         </div>
@@ -629,7 +588,6 @@
 @code {
     private string _activeTab = "Booking"; // "Booking" hoặc "Lookup"
     private int _currentStep = 1;
-    private bool _showGradingDemo = false;
 
     private List<DiningTable>? _tables;
     private List<Reservation>? _allReservations;
